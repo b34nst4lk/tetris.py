@@ -20,7 +20,7 @@ from src.settings import (
     rows,
 )
 
-from utils import resource_path
+from utils import asset_resource_path
 
 from src.bitboard import (
     print_board,
@@ -36,7 +36,7 @@ colors = ["Blue", "Green", "LightBlue", "Orange", "Purple", "Red", "Yellow"]
 
 _tiles = []
 for color in colors:
-    tile_path = resource_path(f"src/assets/{color}.png")
+    tile_path = asset_resource_path(f"{color}.png")
     logging.warning(tile_path)
     tile = pygame.image.load(tile_path)
     tile = pygame.transform.scale(tile, (tile_width, tile_height))

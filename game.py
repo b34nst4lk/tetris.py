@@ -17,7 +17,7 @@ from src.settings import (
     tile_height,
 )
 
-from utils import resource_path
+from utils import asset_resource_path
 
 top_border = Rect(0, 0, width, tile_height)
 left_border = Rect(0, 0, tile_width, height)
@@ -28,7 +28,7 @@ if __name__ == "__main__":
     pygame.init()
     screen = pygame.display.set_mode(size)
 
-    background_path = resource_path(f"src/assets/Board.png")
+    background_path = asset_resource_path("Board.png")
     background = pygame.image.load(background_path)
     background = pygame.transform.scale(background, size)
 
