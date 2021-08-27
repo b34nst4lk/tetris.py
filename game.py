@@ -1,7 +1,4 @@
-import logging
-
 import pygame
-from pygame.rect import Rect
 
 from src.main import (
     Tetriminos,
@@ -10,19 +7,9 @@ from src.main import (
 
 from src.settings import (
     size,
-    base_path,
-    width,
-    height,
-    tile_width,
-    tile_height,
 )
 
 from utils import asset_resource_path
-
-top_border = Rect(0, 0, width, tile_height)
-left_border = Rect(0, 0, tile_width, height)
-right_border = Rect(width - tile_width, 0, tile_width, height)
-bottom_border = Rect(0, height - tile_height, width, tile_height)
 
 if __name__ == "__main__":
     pygame.init()
@@ -31,6 +18,8 @@ if __name__ == "__main__":
     background_path = asset_resource_path("Board.png")
     background = pygame.image.load(background_path)
     background = pygame.transform.scale(background, size)
+    
+    drop_sound = pygame.mixer.Sound(asset_resource_path("drop.wav"))
 
     running = True
     game = Tetriminos(screen)
@@ -38,7 +27,6 @@ if __name__ == "__main__":
     start_time = pygame.time.get_ticks()
     while running:
         screen.blit(background, (0, 0))
-
         events = pygame.event.get()
         
         hold_down = False
@@ -54,6 +42,9 @@ if __name__ == "__main__":
                     game.move_down()
                 if event.key in {pygame.K_UP}:
                     game.move_down_and_lock()
+                    drop_sound.play()
+                if event.key in {pygame.K_SPACE}:
+                    game.rotate()
        
         game.render()
         if pygame.time.get_ticks() - start_time > 300:

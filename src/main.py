@@ -11,39 +11,39 @@ from pygame.rect import Rect
 from pygame.surface import Surface
 
 from src.settings import (
-    base_path,
-    size,
-    tile_width,
-    tile_height,
-    tile_size,
     columns,
     rows,
+    tile_height,
+    tile_size,
+    tile_width,
 )
 
 from utils import asset_resource_path
 
 from src.bitboard import (
-    print_board,
+    all_borders,
     arrangement_to_bit,
-    decompose_bits,
+    bitboard_to_coords,
     bottom_border,
-    top_border,
+    decompose_bits,
     left_border,
     right_border,
+    rotate_bitboard,
+    top_border,
+    widen_bitboard_width,
 )
 
+# Load assets
 colors = ["Blue", "Green", "LightBlue", "Orange", "Purple", "Red", "Yellow"]
 
 _tiles = []
 for color in colors:
     tile_path = asset_resource_path(f"{color}.png")
-    logging.warning(tile_path)
     tile = pygame.image.load(tile_path)
     tile = pygame.transform.scale(tile, (tile_width, tile_height))
     _tiles.append(tile)
 
 tiles = cycle(_tiles)
-
 
 class Shapes(Enum):
     i = "i"
@@ -65,10 +65,12 @@ tetriminos: Dict[Shapes, List[List[int]]] = {
     Shapes.j: [
         [0, 0, 1],
         [1, 1, 1],
+        [0, 0, 0],
     ],
     Shapes.l: [
         [1, 0, 0],
         [1, 1, 1],
+        [0, 0, 0],
     ],
     Shapes.o: [
         [1, 1],
@@ -77,57 +79,35 @@ tetriminos: Dict[Shapes, List[List[int]]] = {
     Shapes.s: [
         [0, 1, 1],
         [1, 1, 0],
+        [0, 0, 0],
     ],
     Shapes.t: [
         [0, 1, 0],
         [1, 1, 1],
+        [0, 0, 0],
     ],
     Shapes.z: [
         [1, 1, 0],
         [0, 1, 1],
+        [0, 0, 0],
     ],
 }
 
+def shape_generator():
+    bag = []
+    while True:
+        if not bag:
+            bag = list(Shapes)
+            random.shuffle(bag)
+        yield bag.pop(0)  
+        
 bits: Dict[Shapes, int] = {}
 for key, arrangement in tetriminos.items():
     bits[key] = arrangement_to_bit(arrangement)
 
-def bitboard_to_row(bitboard: int):
-    row = 1
-    while bitboard & bottom_border == 0:
-        bitboard >>= columns
-        row += 1
-    return row
-
-
-def bitboard_to_column(bitboard: int):
-    column = 1
-    while bitboard & right_border == 0:
-        bitboard >>= 1
-        column += 1
-
-    return column
-
-def bitboard_to_coords(bitboard: int) -> Tuple[int, int]:
-    global columns, rows, tile_width, tile_height
-    only_one_bit = len(decompose_bits(bitboard)) == 1
-
-    if not only_one_bit:
-        raise ValueError("bitboard contains more than one bit")
-
-    row = bitboard_to_row(bitboard)
-    row = rows - row
-
-    column = bitboard_to_column(bitboard)
-    column = columns - column
-
-    coords = (column * tile_width, row * tile_height)
-    return coords
-
-# def get_bitboard_top_left_position(bitboard: int) -> Tuple[int, int]:
-#     bitboard_copy = bitboard
-#     while bitboard_copy  bottom_row > 0
-#     pass        
+tetriminos_widths: Dict[Shapes, int] = {}
+for key, arrangement in tetriminos.items():
+    tetriminos_widths[key] = len(arrangement[0])
 
 @dataclass
 class Tile:
@@ -182,9 +162,44 @@ class Tetrimino:
     def move_right(self):
         self.bitboard >>= 1
 
-    def rotate(self):
+    def test_rotate(self):
+        # Prepare tetrimino for comparison
+        current_rotation = self.rotation
+        arrangement = tetriminos[self.shape]
+        tetrimino_width = tetriminos_widths[self.shape]
+        small_bitboard = arrangement_to_bit(arrangement, tetrimino_width) 
+        for _ in range(current_rotation):
+            small_bitboard = rotate_bitboard(small_bitboard, tetrimino_width)
+
+        compare_bitboard = widen_bitboard_width(small_bitboard, tetrimino_width, columns)
+
+        # Trim current bitboard to identify shift
         bitboard = self.bitboard
-        top_left_coords = self.get_top_left_coords(bitboard)
+
+        shift = 0
+        while bitboard & bottom_border == 0:
+            bitboard >>= columns
+            shift += columns
+        
+        while bitboard != compare_bitboard:
+            if bitboard > compare_bitboard:
+                bitboard >>= 1
+                shift += 1
+            else:
+                bitboard <<=1
+                shift -= 1
+        
+        small_bitboard = rotate_bitboard(small_bitboard, tetrimino_width)
+        rotated_bitboard = widen_bitboard_width(small_bitboard, tetrimino_width, columns)
+        rotated_bitboard <<= shift
+        return rotated_bitboard 
+
+    def set_rotate(self, bitboard: int):
+        self.bitboard = bitboard
+        self.rotation += 1
+        if self.rotation > 3:
+            self.rotation = 0
+        
 @dataclass
 class Tetriminos:
     screen: pygame.display
@@ -192,14 +207,19 @@ class Tetriminos:
 
     def __post_init__(self):
         self.tiles: List[Tile] = []
+        self.shape_generator = shape_generator()
 
     def get_tetrimino(self):
         if not self.tetrimino or self.tetrimino.locked:
             tile = next(tiles)
-            shape = random.choice(list(Shapes))
+            shape = next(self.shape_generator)
             self.tetrimino = Tetrimino(shape, tile, self.screen)
 
         return self.tetrimino
+
+    @staticmethod
+    def collide(bitboard: int, obj: int):
+        return bitboard & obj > 0
 
     @staticmethod
     def collide_left(tetrimino: Tetrimino, obj: int):
@@ -272,6 +292,24 @@ class Tetriminos:
             active_tetrimino.move_down()
             active_tetrimino.render()
 
+    def rotate(self):
+        active_tetrimino = self.get_tetrimino()
+        test_bitboard = active_tetrimino.test_rotate()
+
+        full_board = all_borders
+        for tile in self.tiles:
+            full_board |= tile.bitboard
+
+        if self.collide(full_board, test_bitboard):
+            if not self.collide(test_bitboard >> 1, all_borders):
+                test_bitboard >>= 1
+            elif not self.collide(test_bitboard << 1, all_borders):
+                test_bitboard <<= 1
+            else:
+                return
+
+        active_tetrimino.set_rotate(test_bitboard)
+
     def render(self):
         self.get_tetrimino().render()
         for tile in self.tiles:
@@ -282,23 +320,5 @@ class Tetriminos:
             if tile.bitboard & top_border > 0:
                 return True
 
-
 def game_over():
     logging.warning("game over")
-
-
-if __name__ == "__main__":
-    # from bitboard import print_board
-
-    # print_board("t", arrangement_to_bit(tetriminos[Shapes.t]))
-
-    # for i in decompose_bits(arrangement_to_bit(tetriminos[Shapes.t])):
-    #     print_board(i, i)
-
-    # Tetrimino(Shapes.l, next(tiles), None)
-
-    bitboard = 1 << (rows * columns - 2)
-    print_board("top_left_corner", bitboard)
-    print(bitboard_to_row(bitboard))
-    print(bitboard_to_column(bitboard))
-    print(bitboard_to_coords(bitboard))
