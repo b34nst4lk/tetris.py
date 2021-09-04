@@ -20,7 +20,8 @@ if __name__ == "__main__":
     background = pygame.transform.scale(background, SIZE)
     
     drop_sound = pygame.mixer.Sound(asset_resource_path("drop.wav"))
-
+    pygame.mixer.music.load(asset_resource_path("bgm.wav"))
+    pygame.mixer.music.play(-1)
     running = True
     game = Tetriminos(screen)
     clock = pygame.time.Clock()
