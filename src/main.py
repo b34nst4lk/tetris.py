@@ -1,7 +1,6 @@
-import os
 import random
 from itertools import cycle
-from typing import List, Optional, Tuple, Dict
+from typing import List, Optional, Dict
 from dataclasses import dataclass
 import logging
 from enum import Enum
@@ -21,7 +20,6 @@ from src.settings import (
 from src.utils import asset_resource_path
 
 from src.bitboard import (
-    all_borders,
     arrangement_to_bit,
     bitboard_to_coords,
     bottom_border,
@@ -94,14 +92,17 @@ tetriminos: Dict[Shapes, List[List[int]]] = {
     ],
 }
 
+
 def shape_generator():
     bag = []
     while True:
         if not bag:
-            bag = list(Shapes)
+            bag = [Shapes.i, Shapes.o]
+            # bag = list(Shapes)
             random.shuffle(bag)
-        yield bag.pop(0)  
-        
+        yield bag.pop(0)
+
+
 bits: Dict[Shapes, int] = {}
 for key, arrangement in tetriminos.items():
     bits[key] = arrangement_to_bit(arrangement)
@@ -109,6 +110,7 @@ for key, arrangement in tetriminos.items():
 tetriminos_widths: Dict[Shapes, int] = {}
 for key, arrangement in tetriminos.items():
     tetriminos_widths[key] = len(arrangement[0])
+
 
 @dataclass
 class Tile:
@@ -204,7 +206,8 @@ class Tetrimino:
         self.rotation += 1
         if self.rotation > 3:
             self.rotation = 0
-        
+
+
 @dataclass
 class Tetriminos:
     screen: pygame.display
@@ -223,9 +226,7 @@ class Tetriminos:
         return self.tetrimino
 
     def get_full_board(self, include_borders=False):
-        full_board = (
-            (right_border | left_border) if include_borders else 0
-        )
+        full_board = (right_border | left_border) if include_borders else 0
         for tile in self.tiles:
             full_board |= tile.bitboard
         return full_board
@@ -267,18 +268,22 @@ class Tetriminos:
                 if bit in all_tiles:
                     del all_tiles[bit]
 
-            shifted_tiles = [tile for tile in all_tiles.values() if tile.bitboard > line_filter]
+            shifted_tiles = [
+                tile for tile in all_tiles.values() if tile.bitboard > line_filter
+            ]
             for tile in shifted_tiles:
                 try:
                     tile.bitboard >>= COLUMNS
                 except Exception as e:
-                    import pdb; pdb.set_trace()
+                    import pdb
 
+                    pdb.set_trace()
 
-            static_tiles = [tile for tile in all_tiles.values() if tile.bitboard < line_filter]
+            static_tiles = [
+                tile for tile in all_tiles.values() if tile.bitboard < line_filter
+            ]
             self.tiles = shifted_tiles + static_tiles
-            
-        
+
     def _move_down(self, tetrimino: Tetrimino) -> Tetrimino:
         if self.collide_bottom(tetrimino, bottom_border):
             self.tiles.extend(tetrimino.tiles)
@@ -352,6 +357,7 @@ class Tetriminos:
         for tile in self.tiles:
             if tile.bitboard & top_border > 0:
                 return True
+
 
 def game_over():
     logging.warning("game over")

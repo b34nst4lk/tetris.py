@@ -89,11 +89,12 @@ def bitboard_top(bitboard: int) -> int:
         return 0
 
     for row in range(ROWS):
-        if bitboard >> COLUMNS ==  0:
+        if bitboard >> COLUMNS == 0:
             return row
         bitboard >>= COLUMNS
 
     return ROWS
+
 
 def bitboard_line_filters(start, end) -> List[int]:
     if start > end:
@@ -107,6 +108,7 @@ def bitboard_line_filters(start, end) -> List[int]:
         line_filters.append(bottom_border << (i * COLUMNS))
 
     return line_filters
+
 
 def bitboard_to_coords(bitboard: int) -> Tuple[int, int]:
     only_one_bit = len(decompose_bits(bitboard)) == 1
@@ -148,18 +150,20 @@ def rotate_bitboard(bitboard: int, width: int) -> int:
         i += 1
     return rotated
 
+
 def widen_bitboard_width(bitboard: int, width: int, new_width: int) -> int:
     new_bitboard = 0
     row_filter = get_row_filter(width)
-    
+
     row_num = 0
     while bitboard > 0:
         row = bitboard & row_filter
         new_bitboard |= row << (row_num * new_width)
-        bitboard >>= width    
+        bitboard >>= width
         row_num += 1
 
     return new_bitboard
+
 
 if __name__ == "__main__":
     print_board("left_border", left_border)
