@@ -1,6 +1,6 @@
 import pygame
 
-from src.main import (
+from src.tetriminos import (
     Tetriminos,
     game_over,
 )
