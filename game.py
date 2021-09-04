@@ -9,7 +9,7 @@ from src.settings import (
     size,
 )
 
-from utils import asset_resource_path
+from src.utils import asset_resource_path
 
 if __name__ == "__main__":
     pygame.init()

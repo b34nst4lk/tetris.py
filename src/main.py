@@ -18,7 +18,7 @@ from src.settings import (
     tile_width,
 )
 
-from utils import asset_resource_path
+from src.utils import asset_resource_path
 
 from src.bitboard import (
     all_borders,
