@@ -168,7 +168,7 @@ class Tetrimino:
         current_rotation = self.rotation
         arrangement = tetriminos[self.shape]
         tetrimino_width = tetriminos_widths[self.shape]
-        small_bitboard = arrangement_to_bit(arrangement, tetrimino_width) 
+        small_bitboard = arrangement_to_bit(arrangement, tetrimino_width)
         for _ in range(current_rotation):
             small_bitboard = rotate_bitboard(small_bitboard, tetrimino_width)
 
@@ -222,6 +222,14 @@ class Tetriminos:
 
         return self.tetrimino
 
+    def get_full_board(self, include_borders=False):
+        full_board = (
+            (right_border | left_border) if include_borders else 0
+        )
+        for tile in self.tiles:
+            full_board |= tile.bitboard
+        return full_board
+
     @staticmethod
     def collide(bitboard: int, obj: int):
         return bitboard & obj > 0
@@ -244,20 +252,52 @@ class Tetriminos:
         collision_zone = bitboard >> COLUMNS
         return collision_zone & obj > 0
 
-    def move_down(self):
-        active_tetrimino = self.get_tetrimino()
-        if self.collide_bottom(active_tetrimino, bottom_border):
-            self.tiles.extend(active_tetrimino.tiles)
-            active_tetrimino.locked = True
-            return
+    def clear_lines(self):
+
+        line_filter = bottom_border << COLUMNS
+        while line_filter < top_border:
+            all_tiles = {tile.bitboard: tile for tile in self.tiles}
+            full_board = self.get_full_board(include_borders=True)
+
+            if (line_filter & full_board) != line_filter:
+                line_filter <<= COLUMNS
+                continue
+
+            for bit in decompose_bits(line_filter):
+                if bit in all_tiles:
+                    del all_tiles[bit]
+
+            shifted_tiles = [tile for tile in all_tiles.values() if tile.bitboard > line_filter]
+            for tile in shifted_tiles:
+                try:
+                    tile.bitboard >>= COLUMNS
+                except Exception as e:
+                    import pdb; pdb.set_trace()
+
+
+            static_tiles = [tile for tile in all_tiles.values() if tile.bitboard < line_filter]
+            self.tiles = shifted_tiles + static_tiles
+            
+        
+    def _move_down(self, tetrimino: Tetrimino) -> Tetrimino:
+        if self.collide_bottom(tetrimino, bottom_border):
+            self.tiles.extend(tetrimino.tiles)
+            tetrimino.locked = True
 
         for tile in self.tiles:
-            if self.collide_bottom(active_tetrimino, tile.bitboard):
-                self.tiles.extend(active_tetrimino.tiles)
-                active_tetrimino.locked = True
-                return
+            if self.collide_bottom(tetrimino, tile.bitboard) and not tetrimino.locked:
+                self.tiles.extend(tetrimino.tiles)
+                tetrimino.locked = True
 
-        active_tetrimino.move_down()
+        if tetrimino.locked:
+            pass
+        else:
+            tetrimino.move_down()
+        return tetrimino
+
+    def move_down(self):
+        active_tetrimino = self.get_tetrimino()
+        self._move_down(active_tetrimino)
 
     def move_left(self):
         active_tetrimino = self.get_tetrimino()
@@ -284,31 +324,19 @@ class Tetriminos:
     def move_down_and_lock(self):
         active_tetrimino = self.get_tetrimino()
         while not active_tetrimino.locked:
-            if self.collide_bottom(active_tetrimino, bottom_border):
-                self.tiles.extend(active_tetrimino.tiles)
-                active_tetrimino.locked = True
-                return
-
-            for tile in self.tiles:
-                if self.collide_bottom(active_tetrimino, tile.bitboard):
-                    self.tiles.extend(active_tetrimino.tiles)
-                    active_tetrimino.locked = True
-                    return
-            active_tetrimino.move_down()
+            self._move_down(active_tetrimino)
             active_tetrimino.render()
 
     def rotate(self):
         active_tetrimino = self.get_tetrimino()
         test_bitboard = active_tetrimino.test_rotate()
 
-        full_board = all_borders
-        for tile in self.tiles:
-            full_board |= tile.bitboard
+        full_board = self.get_full_board(include_borders=True)
 
         if self.collide(full_board, test_bitboard):
-            if not self.collide(test_bitboard >> 1, all_borders):
+            if not self.collide(test_bitboard >> 1, full_board):
                 test_bitboard >>= 1
-            elif not self.collide(test_bitboard << 1, all_borders):
+            elif not self.collide(test_bitboard << 1, full_board):
                 test_bitboard <<= 1
             else:
                 return

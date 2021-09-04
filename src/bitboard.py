@@ -73,27 +73,61 @@ def bitboard_to_column(bitboard: int) -> int:
     return COLUMNS - column
 
 
+def bitboard_bottom(bitboard: int) -> int:
+    if bitboard == 0:
+        return 0
+
+    for row in range(ROWS):
+        if bitboard & bottom_border > 0:
+            return row
+        bitboard >>= COLUMNS
+    return ROWS
+
+
+def bitboard_top(bitboard: int) -> int:
+    if bitboard == 0:
+        return 0
+
+    for row in range(ROWS):
+        if bitboard >> COLUMNS ==  0:
+            return row
+        bitboard >>= COLUMNS
+
+    return ROWS
+
+def bitboard_line_filters(start, end) -> List[int]:
+    if start > end:
+        raise ValueError
+    line_filter = 0
+    for i in range(start, end + 1):
+        line_filter |= bottom_border << (i * COLUMNS)
+
+    line_filters = [line_filter]
+    for i in range(start, end + 1):
+        line_filters.append(bottom_border << (i * COLUMNS))
+
+    return line_filters
+
 def bitboard_to_coords(bitboard: int) -> Tuple[int, int]:
-    global columns, rows, tile_width, tile_height
     only_one_bit = len(decompose_bits(bitboard)) == 1
 
     if not only_one_bit:
+        print_board("error", bitboard)
         raise ValueError("bitboard contains more than one bit")
 
     row = bitboard_to_row(bitboard)
-    row = rows - row
-
     column = bitboard_to_column(bitboard)
-    column = columns - column
 
     coords = (column * TILE_WIDTH, row * TILE_HEIGHT)
     return coords
+
 
 def get_row_filter(width: int):
     row_filter = 0
     for i in range(width):
         row_filter |= 1 << i
     return row_filter
+
 
 def rotate_bitboard(bitboard: int, width: int) -> int:
     """

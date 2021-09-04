@@ -30,7 +30,7 @@ if __name__ == "__main__":
         screen.blit(background, (0, 0))
         events = pygame.event.get()
         
-        hold_down = False
+        active_tetrimino = game.get_tetrimino()
         for event in events:
             if event.type == pygame.KEYDOWN:
                 if event.key in {pygame.K_ESCAPE, ord("q")}:
@@ -51,6 +51,12 @@ if __name__ == "__main__":
         if pygame.time.get_ticks() - start_time > 300:
             game.move_down()
             start_time = pygame.time.get_ticks()
+
+        if active_tetrimino.locked:
+            game.clear_lines()
+             
+        game.render()
+        pygame.display.flip()
 
         if game.is_game_over():
             game_over()
