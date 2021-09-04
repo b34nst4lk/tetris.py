@@ -1,6 +1,6 @@
 import os
 
-base_path = os.path.dirname(__file__)
-dimensions = columns, rows = 12, 22
-tile_size = tile_width, tile_height = 40, 40
-size = width, height = columns * tile_width, rows * tile_height
+BASE_PATH = os.path.dirname(__file__)
+DIMENSIIONS = COLUMNS, ROWS = 12, 22
+TILE_SIZE = TILE_WIDTH, TILE_HEIGHT = 40, 40
+SIZE = WIDTH, HEIGHT = COLUMNS * TILE_WIDTH, ROWS * TILE_HEIGHT

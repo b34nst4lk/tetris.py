@@ -11,11 +11,11 @@ from pygame.rect import Rect
 from pygame.surface import Surface
 
 from src.settings import (
-    columns,
-    rows,
-    tile_height,
-    tile_size,
-    tile_width,
+    COLUMNS,
+    ROWS,
+    TILE_HEIGHT,
+    TILE_SIZE,
+    TILE_WIDTH,
 )
 
 from src.utils import asset_resource_path
@@ -40,10 +40,11 @@ _tiles = []
 for color in colors:
     tile_path = asset_resource_path(f"{color}.png")
     tile = pygame.image.load(tile_path)
-    tile = pygame.transform.scale(tile, (tile_width, tile_height))
+    tile = pygame.transform.scale(tile, (TILE_WIDTH, TILE_HEIGHT))
     _tiles.append(tile)
 
 tiles = cycle(_tiles)
+
 
 class Shapes(Enum):
     i = "i"
@@ -121,7 +122,7 @@ class Tile:
             bitboard = self.bitboard
 
         coords = bitboard_to_coords(bitboard)
-        self.rect.update(coords, tile_size)
+        self.rect.update(coords, TILE_SIZE)
         self.screen.blit(self.tile, self.rect)
         self.bitboard = bitboard
 
@@ -136,7 +137,7 @@ class Tetrimino:
     locked: bool = False
 
     def __post_init__(self):
-        self.bitboard = bits[self.shape] << (columns * (rows - 1) - columns // 2 - 2)
+        self.bitboard = bits[self.shape] << (COLUMNS * (ROWS - 1) - COLUMNS // 2 - 2)
 
         self.tiles: List[Tile] = []
         for bit in decompose_bits(self.bitboard):
@@ -154,7 +155,7 @@ class Tetrimino:
             tile.render(bit)
 
     def move_down(self):
-        self.bitboard >>= columns
+        self.bitboard >>= COLUMNS
 
     def move_left(self):
         self.bitboard <<= 1
@@ -171,28 +172,32 @@ class Tetrimino:
         for _ in range(current_rotation):
             small_bitboard = rotate_bitboard(small_bitboard, tetrimino_width)
 
-        compare_bitboard = widen_bitboard_width(small_bitboard, tetrimino_width, columns)
+        compare_bitboard = widen_bitboard_width(
+            small_bitboard, tetrimino_width, COLUMNS
+        )
 
         # Trim current bitboard to identify shift
         bitboard = self.bitboard
 
         shift = 0
         while bitboard & bottom_border == 0:
-            bitboard >>= columns
-            shift += columns
-        
+            bitboard >>= COLUMNS
+            shift += COLUMNS
+
         while bitboard != compare_bitboard:
             if bitboard > compare_bitboard:
                 bitboard >>= 1
                 shift += 1
             else:
-                bitboard <<=1
+                bitboard <<= 1
                 shift -= 1
-        
+
         small_bitboard = rotate_bitboard(small_bitboard, tetrimino_width)
-        rotated_bitboard = widen_bitboard_width(small_bitboard, tetrimino_width, columns)
+        rotated_bitboard = widen_bitboard_width(
+            small_bitboard, tetrimino_width, COLUMNS
+        )
         rotated_bitboard <<= shift
-        return rotated_bitboard 
+        return rotated_bitboard
 
     def set_rotate(self, bitboard: int):
         self.bitboard = bitboard
@@ -236,7 +241,7 @@ class Tetriminos:
     @staticmethod
     def collide_bottom(tetrimino: Tetrimino, obj: int):
         bitboard = tetrimino.bitboard
-        collision_zone = bitboard >> columns
+        collision_zone = bitboard >> COLUMNS
         return collision_zone & obj > 0
 
     def move_down(self):

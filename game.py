@@ -6,18 +6,18 @@ from src.main import (
 )
 
 from src.settings import (
-    size,
+    SIZE,
 )
 
 from src.utils import asset_resource_path
 
 if __name__ == "__main__":
     pygame.init()
-    screen = pygame.display.set_mode(size)
+    screen = pygame.display.set_mode(SIZE)
 
     background_path = asset_resource_path("Board.png")
     background = pygame.image.load(background_path)
-    background = pygame.transform.scale(background, size)
+    background = pygame.transform.scale(background, SIZE)
     
     drop_sound = pygame.mixer.Sound(asset_resource_path("drop.wav"))
 

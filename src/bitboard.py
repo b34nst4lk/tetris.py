@@ -2,27 +2,27 @@ import textwrap
 from typing import List, Tuple
 
 from src.settings import (
-    columns,
-    rows,
-    tile_width,
-    tile_height,
+    COLUMNS,
+    ROWS,
+    TILE_WIDTH,
+    TILE_HEIGHT,
 )
 
 bottom_border: int = 0
-for i in range(columns):
+for i in range(COLUMNS):
     bottom_border |= 1 << i
 
 right_border: int = 0
-for i in range(rows):
+for i in range(ROWS):
     right_border |= 1 << (i * 12)
 
-left_border: int = right_border << (columns - 1)
-top_border: int = bottom_border << ((columns) * (rows - 1))
+left_border: int = right_border << (COLUMNS - 1)
+top_border: int = bottom_border << ((COLUMNS) * (ROWS - 1))
 
 all_borders: int = left_border | right_border | top_border | bottom_border
 
 
-def print_board(name, board, height=rows, width=columns):
+def print_board(name, board, height=ROWS, width=COLUMNS):
     print("\n")
     print(name)
     string_board = str(bin(board))[2:]
@@ -31,7 +31,7 @@ def print_board(name, board, height=rows, width=columns):
         print(row)
 
 
-def arrangement_to_bit(arrangement: List[List[int]], width=columns) -> int:
+def arrangement_to_bit(arrangement: List[List[int]], width=COLUMNS) -> int:
     bit = 0
     for row in arrangement:
         bit <<= width
@@ -56,21 +56,21 @@ def decompose_bits(x: int) -> List[int]:
     return bits
 
 
-def bitboard_to_row(bitboard: int):
+def bitboard_to_row(bitboard: int) -> int:
     row = 1
     while bitboard & bottom_border == 0:
-        bitboard >>= columns
+        bitboard >>= COLUMNS
         row += 1
-    return row
+    return ROWS - row
 
 
-def bitboard_to_column(bitboard: int):
+def bitboard_to_column(bitboard: int) -> int:
     column = 1
     while bitboard & right_border == 0:
         bitboard >>= 1
         column += 1
 
-    return column
+    return COLUMNS - column
 
 
 def bitboard_to_coords(bitboard: int) -> Tuple[int, int]:
@@ -86,7 +86,7 @@ def bitboard_to_coords(bitboard: int) -> Tuple[int, int]:
     column = bitboard_to_column(bitboard)
     column = columns - column
 
-    coords = (column * tile_width, row * tile_height)
+    coords = (column * TILE_WIDTH, row * TILE_HEIGHT)
     return coords
 
 def get_row_filter(width: int):
