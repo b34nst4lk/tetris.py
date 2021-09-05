@@ -7,6 +7,8 @@ from src.tetriminos import (
 
 from src.settings import (
     SIZE,
+    WIDTH,
+    HEIGHT,
 )
 
 from src.utils import asset_resource_path
@@ -14,23 +16,18 @@ from src.utils import asset_resource_path
 
 def main():
     pygame.init()
-    screen = pygame.display.set_mode(SIZE)
-
-    background_path = asset_resource_path("Board.png")
-    background = pygame.image.load(background_path)
-    background = pygame.transform.scale(background, SIZE)
+    screen = pygame.display.set_mode((WIDTH + 200, HEIGHT + 200))
 
     drop_sound = pygame.mixer.Sound(asset_resource_path("drop.wav"))
     pygame.mixer.music.load(asset_resource_path("bgm.wav"))
     pygame.mixer.music.play(-1)
     running = True
-    game = Game(screen)
+    game = Game(screen, (100, 100))
     clock = pygame.time.Clock()
     start_time = pygame.time.get_ticks()
 
     while running:
         events = pygame.event.get()
-        screen.blit(background, (0, 0))
 
         active_tetrimino = game.get_tetrimino()
         for event in events:

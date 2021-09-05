@@ -1,6 +1,6 @@
 import random
 from itertools import cycle
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Tuple
 from dataclasses import dataclass
 import logging
 from enum import Enum
@@ -10,6 +10,7 @@ from pygame.rect import Rect
 from pygame.surface import Surface
 
 from src.settings import (
+    SIZE,
     COLUMNS,
     ROWS,
     TILE_HEIGHT,
@@ -32,10 +33,14 @@ from src.bitboard import (
 )
 
 # Load assets
-colors = ["Blue", "Green", "LightBlue", "Orange", "Purple", "Red", "Yellow"]
+background_path = asset_resource_path("Board.png")
+background = pygame.image.load(background_path)
+background = pygame.transform.scale(background, SIZE)
+
+COLORS = ["Blue", "Green", "LightBlue", "Orange", "Purple", "Red", "Yellow"]
 
 _tiles = []
-for color in colors:
+for color in COLORS:
     tile_path = asset_resource_path(f"{color}.png")
     tile = pygame.image.load(tile_path)
     tile = pygame.transform.scale(tile, (TILE_WIDTH, TILE_HEIGHT))
@@ -117,13 +122,15 @@ class Tile:
     rect: Rect
     tile: Surface
     screen: pygame.display
+    offset: Tuple[int, int]
 
     def render(self, bitboard: Optional[int] = None):
         if not bitboard:
             bitboard = self.bitboard
 
-        coords = bitboard_to_coords(bitboard)
-        self.rect.update(coords, TILE_SIZE)
+        x, y = bitboard_to_coords(bitboard)
+        offset_x, offset_y = self.offset
+        self.rect.update((x + offset_x, y + offset_y), TILE_SIZE)
         self.screen.blit(self.tile, self.rect)
         self.bitboard = bitboard
 
@@ -133,6 +140,7 @@ class Tetrimino:
     shape: Shapes
     tile: pygame.Surface
     screen: pygame.display
+    offset: Tuple[int, int]
     bitboard: int = 0
     rotation: int = 0
     locked: bool = False
@@ -142,15 +150,12 @@ class Tetrimino:
 
         self.tiles: List[Tile] = []
         for bit in decompose_bits(self.bitboard):
-            tile = Tile(bit, self.tile.get_rect(), self.tile, self.screen)
+            tile = Tile(bit, self.tile.get_rect(), self.tile, self.screen, self.offset)
             self.tiles.append(tile)
 
         self.render()
 
     def render(self):
-        if not self.tiles:
-            raise ValueError("self.tiles required")
-
         bits = decompose_bits(self.bitboard)
         for bit, tile in zip(bits, self.tiles):
             tile.render(bit)
@@ -210,6 +215,7 @@ class Tetrimino:
 @dataclass
 class Game:
     screen: pygame.display
+    offset: Tuple[int, int]
     tetrimino: Optional[Tetrimino] = None
 
     def __post_init__(self):
@@ -220,7 +226,7 @@ class Game:
         if not self.tetrimino or self.tetrimino.locked:
             tile = next(tiles)
             shape = next(self.shape_generator)
-            self.tetrimino = Tetrimino(shape, tile, self.screen)
+            self.tetrimino = Tetrimino(shape, tile, self.screen, self.offset)
 
         return self.tetrimino
 
@@ -271,12 +277,7 @@ class Game:
                 tile for tile in all_tiles.values() if tile.bitboard > line_filter
             ]
             for tile in shifted_tiles:
-                try:
-                    tile.bitboard >>= COLUMNS
-                except Exception as e:
-                    import pdb
-
-                    pdb.set_trace()
+                tile.bitboard >>= COLUMNS
 
             static_tiles = [
                 tile for tile in all_tiles.values() if tile.bitboard < line_filter
@@ -348,6 +349,7 @@ class Game:
         active_tetrimino.set_rotate(test_bitboard)
 
     def render(self):
+        self.screen.blit(background, self.offset)
         self.get_tetrimino().render()
         for tile in self.tiles:
             tile.render()

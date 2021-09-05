@@ -14,7 +14,7 @@ Tetris implemented in pygame using bitboards
     - [x] BUG: Clearing more than 1 line results in negative shift count bug
 
 - [] Game UI
-    - [] Center main game in middle of screen
+    - [x] Center main game in middle of screen
     - [] Add next piece UI
     - [] Add stashed piece UI
     - [] Add score counter
