@@ -1,7 +1,7 @@
 import pygame
 
 from src.tetriminos import (
-    Tetriminos,
+    Game,
     game_over,
 )
 
@@ -24,7 +24,7 @@ def main():
     pygame.mixer.music.load(asset_resource_path("bgm.wav"))
     pygame.mixer.music.play(-1)
     running = True
-    game = Tetriminos(screen)
+    game = Game(screen)
     clock = pygame.time.Clock()
     start_time = pygame.time.get_ticks()
 

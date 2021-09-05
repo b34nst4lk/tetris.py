@@ -97,8 +97,7 @@ def shape_generator():
     bag = []
     while True:
         if not bag:
-            bag = [Shapes.i, Shapes.o]
-            # bag = list(Shapes)
+            bag = list(Shapes)
             random.shuffle(bag)
         yield bag.pop(0)
 
@@ -209,7 +208,7 @@ class Tetrimino:
 
 
 @dataclass
-class Tetriminos:
+class Game:
     screen: pygame.display
     tetrimino: Optional[Tetrimino] = None
 
