@@ -98,15 +98,6 @@ tetriminos: Dict[Shapes, List[List[int]]] = {
 }
 
 
-def shape_generator():
-    bag = []
-    while True:
-        if not bag:
-            bag = list(Shapes)
-            random.shuffle(bag)
-        yield bag.pop(0)
-
-
 bits: Dict[Shapes, int] = {}
 for key, arrangement in tetriminos.items():
     bits[key] = arrangement_to_bit(arrangement)
@@ -211,16 +202,39 @@ class Tetrimino:
         if self.rotation > 3:
             self.rotation = 0
 
+def shape_generator():
+    bag = []
+    while True:
+        if not bag:
+            bag = list(Shapes)
+            random.shuffle(bag)
+        yield bag.pop(0)
+
+
+class TetriminoQueue:
+    def __init__(self):
+        self.shape_generator = shape_generator()
+        self.queue = [next(self.shape_generator) for _ in range(7)]
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        self.queue.append(next(self.shape_generator))
+        return self.queue.pop(0)
+
+    def peek(self):
+        return self.queue[0]
 
 @dataclass
 class Game:
     screen: pygame.display
     offset: Tuple[int, int]
-    tetrimino: Optional[Tetrimino] = None
+    shape_generator: TetriminoQueue
 
     def __post_init__(self):
         self.tiles: List[Tile] = []
-        self.shape_generator = shape_generator()
+        self.tetrimino: Optional[Tetrimino] = None
 
     def get_tetrimino(self):
         if not self.tetrimino or self.tetrimino.locked:

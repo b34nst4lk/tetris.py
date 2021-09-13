@@ -27,3 +27,6 @@ Tetris implemented in pygame using bitboards
 - [] Piece stash
     - [] Allow player to stash the existing piece and call the next piece if stash is empty
     - [] Allow player to swap the current piece with stashed piece
+
+## Credits
+- L-Gad [Tetriminos Pack](https://l-gad.itch.io/tetriminos-asset-pack)
