@@ -55,22 +55,43 @@ def decompose_bits(x: int) -> List[int]:
         i <<= 1
     return bits
 
+def get_bottom_border(columns: int) -> int:
+    border = 0
+    for shift in range(columns):
+        border |= 1 << shift
+    return border
 
-def bitboard_to_row(bitboard: int) -> int:
+def get_top_border(columns: int, rows: int) -> int:
+    border = get_bottom_border(columns)
+    border <<= columns * (rows - 1)
+    return border
+
+def get_right_border(columns: int, rows: int) -> int:
+    border = 0
+    for shift in range(rows):
+        border |= 1 << (shift * columns)
+    return border
+
+def get_left_border(columns: int, rows: int) -> int:
+    border = get_right_border(columns, rows)
+    border <<= (columns - 1)
+    return border
+    
+def bitboard_to_row(bitboard: int, rows: int = ROWS, columns: int = COLUMNS) -> int:
     row = 1
-    while bitboard & bottom_border == 0:
-        bitboard >>= COLUMNS
+    while bitboard & get_bottom_border(columns)== 0:
+        bitboard >>= columns
         row += 1
-    return ROWS - row
+    return rows - row
 
 
-def bitboard_to_column(bitboard: int) -> int:
+def bitboard_to_column(bitboard: int, columns: int = COLUMNS, rows: int = ROWS) -> int:
     column = 1
-    while bitboard & right_border == 0:
+    while bitboard & get_right_border(columns, rows) == 0:
         bitboard >>= 1
         column += 1
 
-    return COLUMNS - column
+    return columns - column
 
 
 def bitboard_bottom(bitboard: int) -> int:
@@ -110,15 +131,15 @@ def bitboard_line_filters(start, end) -> List[int]:
     return line_filters
 
 
-def bitboard_to_coords(bitboard: int) -> Tuple[int, int]:
+def bitboard_to_coords(
+    bitboard: int, rows: int = ROWS, columns: int = COLUMNS
+) -> Tuple[int, int]:
     only_one_bit = len(decompose_bits(bitboard)) == 1
-
     if not only_one_bit:
-        print_board("error", bitboard)
         raise ValueError("bitboard contains more than one bit")
 
-    row = bitboard_to_row(bitboard)
-    column = bitboard_to_column(bitboard)
+    row = bitboard_to_row(bitboard, rows, columns)
+    column = bitboard_to_column(bitboard, columns)
 
     coords = (column * TILE_WIDTH, row * TILE_HEIGHT)
     return coords

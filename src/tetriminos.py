@@ -1,7 +1,9 @@
+from copy import deepcopy
 import random
 from itertools import cycle
 from typing import List, Optional, Dict, Tuple
 from dataclasses import dataclass
+from abc import abstractmethod, ABC
 import logging
 from enum import Enum
 
@@ -98,14 +100,22 @@ tetriminos: Dict[Shapes, List[List[int]]] = {
 }
 
 
-bits: Dict[Shapes, int] = {}
-for key, arrangement in tetriminos.items():
-    bits[key] = arrangement_to_bit(arrangement)
-
 tetriminos_widths: Dict[Shapes, int] = {}
 for key, arrangement in tetriminos.items():
     tetriminos_widths[key] = len(arrangement[0])
 
+def render(screen: pygame.display, bits_and_tiles: Dict[int, Surface], offset, rows: int = ROWS, columns: int = COLUMNS):
+    for bit, tile in bits_and_tiles.items():
+        rect = tile.get_rect()
+
+        x, y = bitboard_to_coords(bit, rows, columns)
+        offset_x, offset_y = offset
+        x += offset_x
+        y += offset_y
+
+        rect.update((x, y), TILE_SIZE)
+
+        screen.blit(tile, rect) 
 
 @dataclass
 class Tile:
@@ -114,12 +124,14 @@ class Tile:
     tile: Surface
     screen: pygame.display
     offset: Tuple[int, int]
+    rows: int = ROWS
+    columns: int = COLUMNS
 
     def render(self, bitboard: Optional[int] = None):
         if not bitboard:
             bitboard = self.bitboard
 
-        x, y = bitboard_to_coords(bitboard)
+        x, y = bitboard_to_coords(bitboard, self.rows, self.columns)
         offset_x, offset_y = self.offset
         self.rect.update((x + offset_x, y + offset_y), TILE_SIZE)
         self.screen.blit(self.tile, self.rect)
@@ -134,31 +146,42 @@ class Tetrimino:
     offset: Tuple[int, int]
     bitboard: int = 0
     rotation: int = 0
+    columns: int = COLUMNS
+    rows: int = ROWS
     locked: bool = False
 
     def __post_init__(self):
-        self.bitboard = bits[self.shape] << (COLUMNS * (ROWS - 1) - COLUMNS // 2 - 2)
+        arrangement = tetriminos[self.shape]
+        bitboard = arrangement_to_bit(arrangement, self.columns)
+        self.bitboard = bitboard << (
+            self.columns * (self.rows - 1) - self.columns // 2 - 2
+        )
 
-        self.tiles: List[Tile] = []
+        self.tiles: Dict[int, Surface] = {}
         for bit in decompose_bits(self.bitboard):
-            tile = Tile(bit, self.tile.get_rect(), self.tile, self.screen, self.offset)
-            self.tiles.append(tile)
-
-        self.render()
+            self.tiles[bit] =(self.tile.copy())
 
     def render(self):
+        render(self.screen, self.tiles, self.offset, self.rows, self.columns)
+
+    def update_tiles(self):
+        tiles: Dict[int, Surface] = {}
         bits = decompose_bits(self.bitboard)
-        for bit, tile in zip(bits, self.tiles):
-            tile.render(bit)
+        for bit, tile in zip(bits, self.tiles.values()):
+            tiles[bit] = tile
+        self.tiles = tiles             
 
     def move_down(self):
-        self.bitboard >>= COLUMNS
+        self.bitboard >>= self.columns
+        self.update_tiles()
 
     def move_left(self):
         self.bitboard <<= 1
+        self.update_tiles()
 
     def move_right(self):
         self.bitboard >>= 1
+        self.update_tiles()
 
     def test_rotate(self):
         # Prepare tetrimino for comparison
@@ -170,7 +193,7 @@ class Tetrimino:
             small_bitboard = rotate_bitboard(small_bitboard, tetrimino_width)
 
         compare_bitboard = widen_bitboard_width(
-            small_bitboard, tetrimino_width, COLUMNS
+            small_bitboard, tetrimino_width, self.columns
         )
 
         # Trim current bitboard to identify shift
@@ -178,8 +201,8 @@ class Tetrimino:
 
         shift = 0
         while bitboard & bottom_border == 0:
-            bitboard >>= COLUMNS
-            shift += COLUMNS
+            bitboard >>= self.columns
+            shift += self.columns
 
         while bitboard != compare_bitboard:
             if bitboard > compare_bitboard:
@@ -191,7 +214,7 @@ class Tetrimino:
 
         small_bitboard = rotate_bitboard(small_bitboard, tetrimino_width)
         rotated_bitboard = widen_bitboard_width(
-            small_bitboard, tetrimino_width, COLUMNS
+            small_bitboard, tetrimino_width, self.columns
         )
         rotated_bitboard <<= shift
         return rotated_bitboard
@@ -201,6 +224,7 @@ class Tetrimino:
         self.rotation += 1
         if self.rotation > 3:
             self.rotation = 0
+        self.update_tiles()
 
 def shape_generator():
     bag = []
@@ -215,31 +239,84 @@ class TetriminoQueue:
     def __init__(self):
         self.shape_generator = shape_generator()
         self.queue = [next(self.shape_generator) for _ in range(7)]
+        self.tile = next(tiles)
 
     def __iter__(self):
         return self
 
-    def __next__(self):
+    def __next__(self) -> Tuple[Shapes, Surface]:
         self.queue.append(next(self.shape_generator))
-        return self.queue.pop(0)
+        tile = self.tile
+        self.tile = next(tiles)
+        return self.queue.pop(0), tile
 
-    def peek(self):
-        return self.queue[0]
+    def peek(self) -> Tuple[Shapes, Surface]:
+        return self.queue[0], self.tile
+
 
 @dataclass
-class Game:
+class Widget(ABC):
     screen: pygame.display
     offset: Tuple[int, int]
+
+    @abstractmethod
+    def render(self):
+        pass
+
+
+@dataclass
+class NextTetrimino(Widget):
+    def __post_init__(self):
+        self.columns = 8
+        self.rows = 6
+
+        widget_bottom_border = 0
+        for i in range(self.columns):
+            widget_bottom_border |= 1 << i
+        widget_top_border = widget_bottom_border << (self.columns * (self.rows - 1))
+        widget_left_border = 0
+        for i in range(self.rows):
+            widget_left_border |= 1 << (self.columns * i)
+
+        widget_right_border = widget_left_border << (self.columns - 1)
+        borders = (
+            widget_bottom_border
+            | widget_top_border
+            | widget_left_border
+            | widget_right_border
+        )
+
+        tile = next(tiles)
+        self.tiles = {}
+        for bit in decompose_bits(borders):
+            self.tiles[bit] = tile.copy()
+
+        self.tetrimino = None
+
+    def set_tetrimino(self, shape: Shapes, tile: Surface):
+        if self.tetrimino and self.tetrimino.tile == tile and self.tetrimino.shape == shape:
+            return
+
+        self.tetrimino = Tetrimino(shape, tile, self.screen, self.offset, columns=self.columns, rows=self.rows)
+        self.tetrimino.move_down()
+        self.tetrimino.move_down()
+        self.tetrimino.move_down()
+
+    def render(self):
+        # render(self.screen, self.tiles, self.offset, self.rows, self.columns)
+        render(self.screen, self.tetrimino.tiles, self.offset, self.rows, self.columns)
+
+@dataclass
+class Game(Widget):
     shape_generator: TetriminoQueue
 
     def __post_init__(self):
-        self.tiles: List[Tile] = []
+        self.tiles: Dict[int, Surface] = {}
         self.tetrimino: Optional[Tetrimino] = None
 
     def get_tetrimino(self):
         if not self.tetrimino or self.tetrimino.locked:
-            tile = next(tiles)
-            shape = next(self.shape_generator)
+            shape, tile = next(self.shape_generator)
             self.tetrimino = Tetrimino(shape, tile, self.screen, self.offset)
 
         return self.tetrimino
@@ -247,7 +324,7 @@ class Game:
     def get_full_board(self, include_borders=False):
         full_board = (right_border | left_border) if include_borders else 0
         for tile in self.tiles:
-            full_board |= tile.bitboard
+            full_board |= tile
         return full_board
 
     @staticmethod
@@ -276,7 +353,7 @@ class Game:
 
         line_filter = bottom_border << COLUMNS
         while line_filter < top_border:
-            all_tiles = {tile.bitboard: tile for tile in self.tiles}
+            all_tiles = self.tiles
             full_board = self.get_full_board(include_borders=True)
 
             if (line_filter & full_board) != line_filter:
@@ -287,31 +364,37 @@ class Game:
                 if bit in all_tiles:
                     del all_tiles[bit]
 
-            shifted_tiles = [
-                tile for tile in all_tiles.values() if tile.bitboard > line_filter
-            ]
-            for tile in shifted_tiles:
-                tile.bitboard >>= COLUMNS
+            shift_tiles = {
+                bit: tile for bit, tile in all_tiles.items() if bit > line_filter
+            }
 
-            static_tiles = [
-                tile for tile in all_tiles.values() if tile.bitboard < line_filter
-            ]
-            self.tiles = shifted_tiles + static_tiles
+            shifted_tiles: Dict[int, Surface] = {}
+            for bit, tile  in shift_tiles.items():
+                bit >>= COLUMNS
+                shifted_tiles[bit] = tile
+
+            static_tiles = {
+                bit: tile for bit, tile in all_tiles.items() if bit < line_filter
+            }
+            self.tiles = shifted_tiles | static_tiles
 
     def _move_down(self, tetrimino: Tetrimino) -> Tetrimino:
         if self.collide_bottom(tetrimino, bottom_border):
-            self.tiles.extend(tetrimino.tiles)
+            self.tiles |= tetrimino.tiles
             tetrimino.locked = True
+            return tetrimino
 
-        for tile in self.tiles:
-            if self.collide_bottom(tetrimino, tile.bitboard) and not tetrimino.locked:
-                self.tiles.extend(tetrimino.tiles)
+        for bit in self.tiles:
+            if self.collide_bottom(tetrimino, bit) and not tetrimino.locked:
                 tetrimino.locked = True
+                break
 
         if tetrimino.locked:
-            pass
-        else:
-            tetrimino.move_down()
+            self.tiles |= tetrimino.tiles
+            tetrimino.locked = True
+            return tetrimino
+
+        tetrimino.move_down()
         return tetrimino
 
     def move_down(self):
@@ -323,8 +406,8 @@ class Game:
         if self.collide_left(active_tetrimino, left_border):
             return
 
-        for tile in self.tiles:
-            if self.collide_left(active_tetrimino, tile.bitboard):
+        for bit in self.tiles:
+            if self.collide_left(active_tetrimino, bit):
                 return
 
         self.get_tetrimino().move_left()
@@ -334,8 +417,8 @@ class Game:
         if self.collide_right(active_tetrimino, right_border):
             return
 
-        for tile in self.tiles:
-            if self.collide_right(active_tetrimino, tile.bitboard):
+        for bit in self.tiles:
+            if self.collide_right(active_tetrimino, bit):
                 return
 
         self.get_tetrimino().move_right()
@@ -365,12 +448,11 @@ class Game:
     def render(self):
         self.screen.blit(background, self.offset)
         self.get_tetrimino().render()
-        for tile in self.tiles:
-            tile.render()
+        render(self.screen, self.tiles, self.offset)
 
     def is_game_over(self):
-        for tile in self.tiles:
-            if tile.bitboard & top_border > 0:
+        for bit in self.tiles:
+            if bit & top_border > 0:
                 return True
 
 

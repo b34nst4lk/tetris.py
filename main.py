@@ -1,12 +1,12 @@
 import pygame
 
 from src.tetriminos import (
-    Game,
+    Game, NextTetrimino,
+    TetriminoQueue,
     game_over,
 )
 
 from src.settings import (
-    SIZE,
     WIDTH,
     HEIGHT,
 )
@@ -16,18 +16,26 @@ from src.utils import asset_resource_path
 
 def main():
     pygame.init()
-    screen = pygame.display.set_mode((WIDTH + 200, HEIGHT + 200))
+    screen = pygame.display.set_mode((WIDTH + 500, HEIGHT + 200))
 
-    drop_sound = pygame.mixer.Sound(asset_resource_path("drop.wav"))
-    pygame.mixer.music.load(asset_resource_path("bgm.wav"))
-    pygame.mixer.music.play(-1)
+    # drop_sound = pygame.mixer.Sound(asset_resource_path("drop.wav"))
+    # pygame.mixer.music.load(asset_resource_path("bgm.wav"))
+    # pygame.mixer.music.play(-1)
     running = True
-    game = Game(screen, (100, 100))
+
+    shape_generator = TetriminoQueue()
+
+    next_tetrimino = NextTetrimino(screen, (600, 100))
+    game = Game(screen, (100, 100), shape_generator)
+
     clock = pygame.time.Clock()
     start_time = pygame.time.get_ticks()
 
     while running:
+        screen.fill((0,0,0))
         events = pygame.event.get()
+
+        next_tetrimino.set_tetrimino(*shape_generator.peek())
 
         active_tetrimino = game.get_tetrimino()
         for event in events:
@@ -53,8 +61,11 @@ def main():
         if active_tetrimino.locked:
             game.clear_lines()
 
+        screen.fill((0,0,0))
         game.render()
+        next_tetrimino.render()
         pygame.display.flip()
+        # break
 
         if game.is_game_over():
             game_over()
