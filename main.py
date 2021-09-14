@@ -1,7 +1,8 @@
 import pygame
 
 from src.tetriminos import (
-    Game, NextTetrimino,
+    Game,
+    NextTetrimino,
     TetriminoQueue,
     game_over,
 )
@@ -32,7 +33,7 @@ def main():
     start_time = pygame.time.get_ticks()
 
     while running:
-        screen.fill((0,0,0))
+        screen.fill((0, 0, 0))
         events = pygame.event.get()
 
         next_tetrimino.set_tetrimino(*shape_generator.peek())
@@ -61,7 +62,7 @@ def main():
         if active_tetrimino.locked:
             game.clear_lines()
 
-        screen.fill((0,0,0))
+        screen.fill((0, 0, 0))
         game.render()
         next_tetrimino.render()
         pygame.display.flip()

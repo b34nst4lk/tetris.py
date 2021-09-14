@@ -55,16 +55,19 @@ def decompose_bits(x: int) -> List[int]:
         i <<= 1
     return bits
 
+
 def get_bottom_border(columns: int) -> int:
     border = 0
     for shift in range(columns):
         border |= 1 << shift
     return border
 
+
 def get_top_border(columns: int, rows: int) -> int:
     border = get_bottom_border(columns)
     border <<= columns * (rows - 1)
     return border
+
 
 def get_right_border(columns: int, rows: int) -> int:
     border = 0
@@ -72,14 +75,16 @@ def get_right_border(columns: int, rows: int) -> int:
         border |= 1 << (shift * columns)
     return border
 
+
 def get_left_border(columns: int, rows: int) -> int:
     border = get_right_border(columns, rows)
-    border <<= (columns - 1)
+    border <<= columns - 1
     return border
-    
+
+
 def bitboard_to_row(bitboard: int, rows: int = ROWS, columns: int = COLUMNS) -> int:
     row = 1
-    while bitboard & get_bottom_border(columns)== 0:
+    while bitboard & get_bottom_border(columns) == 0:
         bitboard >>= columns
         row += 1
     return rows - row

@@ -104,7 +104,14 @@ tetriminos_widths: Dict[Shapes, int] = {}
 for key, arrangement in tetriminos.items():
     tetriminos_widths[key] = len(arrangement[0])
 
-def render(screen: pygame.display, bits_and_tiles: Dict[int, Surface], offset, rows: int = ROWS, columns: int = COLUMNS):
+
+def render(
+    screen: pygame.display,
+    bits_and_tiles: Dict[int, Surface],
+    offset,
+    rows: int = ROWS,
+    columns: int = COLUMNS,
+):
     for bit, tile in bits_and_tiles.items():
         rect = tile.get_rect()
 
@@ -115,7 +122,8 @@ def render(screen: pygame.display, bits_and_tiles: Dict[int, Surface], offset, r
 
         rect.update((x, y), TILE_SIZE)
 
-        screen.blit(tile, rect) 
+        screen.blit(tile, rect)
+
 
 @dataclass
 class Tile:
@@ -159,7 +167,7 @@ class Tetrimino:
 
         self.tiles: Dict[int, Surface] = {}
         for bit in decompose_bits(self.bitboard):
-            self.tiles[bit] =(self.tile.copy())
+            self.tiles[bit] = self.tile.copy()
 
     def render(self):
         render(self.screen, self.tiles, self.offset, self.rows, self.columns)
@@ -169,7 +177,7 @@ class Tetrimino:
         bits = decompose_bits(self.bitboard)
         for bit, tile in zip(bits, self.tiles.values()):
             tiles[bit] = tile
-        self.tiles = tiles             
+        self.tiles = tiles
 
     def move_down(self):
         self.bitboard >>= self.columns
@@ -225,6 +233,7 @@ class Tetrimino:
         if self.rotation > 3:
             self.rotation = 0
         self.update_tiles()
+
 
 def shape_generator():
     bag = []
@@ -294,10 +303,16 @@ class NextTetrimino(Widget):
         self.tetrimino = None
 
     def set_tetrimino(self, shape: Shapes, tile: Surface):
-        if self.tetrimino and self.tetrimino.tile == tile and self.tetrimino.shape == shape:
+        if (
+            self.tetrimino
+            and self.tetrimino.tile == tile
+            and self.tetrimino.shape == shape
+        ):
             return
 
-        self.tetrimino = Tetrimino(shape, tile, self.screen, self.offset, columns=self.columns, rows=self.rows)
+        self.tetrimino = Tetrimino(
+            shape, tile, self.screen, self.offset, columns=self.columns, rows=self.rows
+        )
         self.tetrimino.move_down()
         self.tetrimino.move_down()
         self.tetrimino.move_down()
@@ -305,6 +320,7 @@ class NextTetrimino(Widget):
     def render(self):
         # render(self.screen, self.tiles, self.offset, self.rows, self.columns)
         render(self.screen, self.tetrimino.tiles, self.offset, self.rows, self.columns)
+
 
 @dataclass
 class Game(Widget):
@@ -369,7 +385,7 @@ class Game(Widget):
             }
 
             shifted_tiles: Dict[int, Surface] = {}
-            for bit, tile  in shift_tiles.items():
+            for bit, tile in shift_tiles.items():
                 bit >>= COLUMNS
                 shifted_tiles[bit] = tile
 
