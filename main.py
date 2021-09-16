@@ -2,7 +2,7 @@ import pygame
 
 from src.tetriminos import (
     Game,
-    NextTetrimino,
+    TetriminoDisplay,
     TetriminoQueue,
     game_over,
 )
@@ -17,7 +17,7 @@ from src.utils import asset_resource_path
 
 def main():
     pygame.init()
-    screen = pygame.display.set_mode((WIDTH + 500, HEIGHT + 200))
+    screen = pygame.display.set_mode((WIDTH + 1000, HEIGHT + 200))
 
     # drop_sound = pygame.mixer.Sound(asset_resource_path("drop.wav"))
     # pygame.mixer.music.load(asset_resource_path("bgm.wav"))
@@ -26,8 +26,9 @@ def main():
 
     shape_generator = TetriminoQueue()
 
-    next_tetrimino = NextTetrimino(screen, (600, 100))
-    game = Game(screen, (100, 100), shape_generator)
+    stashed_tetrimino = TetriminoDisplay(screen, (100, 100))
+    next_tetrimino = TetriminoDisplay(screen, (1000, 100))
+    game = Game(screen, (500, 100), shape_generator)
 
     clock = pygame.time.Clock()
     start_time = pygame.time.get_ticks()
@@ -36,6 +37,7 @@ def main():
         screen.fill((0, 0, 0))
         events = pygame.event.get()
 
+        stashed_tetrimino.set_tetrimino(*shape_generator.peek())
         next_tetrimino.set_tetrimino(*shape_generator.peek())
 
         active_tetrimino = game.get_tetrimino()
@@ -64,6 +66,7 @@ def main():
 
         screen.fill((0, 0, 0))
         game.render()
+        stashed_tetrimino.render()
         next_tetrimino.render()
         pygame.display.flip()
         # break

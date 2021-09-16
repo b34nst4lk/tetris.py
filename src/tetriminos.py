@@ -274,7 +274,7 @@ class Widget(ABC):
 
 
 @dataclass
-class NextTetrimino(Widget):
+class TetriminoDisplay(Widget):
     def __post_init__(self):
         self.columns = 8
         self.rows = 6
