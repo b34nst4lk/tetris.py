@@ -17,7 +17,7 @@ from src.utils import asset_resource_path
 
 def main():
     pygame.init()
-    screen = pygame.display.set_mode((WIDTH + 1000, HEIGHT + 200))
+    screen = pygame.display.set_mode((WIDTH + 800, HEIGHT + 200))
 
     # drop_sound = pygame.mixer.Sound(asset_resource_path("drop.wav"))
     # pygame.mixer.music.load(asset_resource_path("bgm.wav"))
@@ -26,9 +26,9 @@ def main():
 
     shape_generator = TetriminoQueue()
 
-    stashed_tetrimino = TetriminoDisplay(screen, (100, 100))
-    next_tetrimino = TetriminoDisplay(screen, (1000, 100))
-    game = Game(screen, (500, 100), shape_generator)
+    stashed_tetrimino = TetriminoDisplay(screen, (40, 100))
+    game = Game(screen, (400, 100), shape_generator)
+    next_tetrimino = TetriminoDisplay(screen, (920, 100))
     can_stash = True
 
     clock = pygame.time.Clock()
