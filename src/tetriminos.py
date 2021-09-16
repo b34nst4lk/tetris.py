@@ -238,10 +238,22 @@ class TetriminoQueue:
         self.queue.append(next(self.shape_generator))
         tile = self.tile
         self.tile = next(tiles)
-        return self.queue.pop(0), tile
+        
+        self.current = self.queue.pop(0), tile
+        return self.current
+
 
     def peek(self) -> Tuple[Shapes, Surface]:
         return self.queue[0], self.tile
+
+class TetriminoStash:
+    def __init__(self):
+        self.stashed: Optional[Tuple[Shapes, Surface]] = None
+
+       
+    def stash(self, to_stash) -> Optional[Tuple[Shapes, Surface]]:
+        stashed, self.stashed = self.stashed, to_stash
+        return stashed
 
 
 @dataclass
@@ -299,8 +311,9 @@ class TetriminoDisplay(Widget):
         self.tetrimino.move_down()
 
     def render(self):
-        # render(self.screen, self.tiles, self.offset, self.rows, self.columns)
-        render(self.screen, self.tetrimino.tiles, self.offset, self.rows, self.columns)
+        render(self.screen, self.tiles, self.offset, self.rows, self.columns)
+        if self.tetrimino:
+            render(self.screen, self.tetrimino.tiles, self.offset, self.rows, self.columns)
 
 
 @dataclass
@@ -310,6 +323,7 @@ class Game(Widget):
     def __post_init__(self):
         self.tiles: Dict[int, Surface] = {}
         self.tetrimino: Optional[Tetrimino] = None
+        self.stashed: Optional[Tuple[Shapes, Surface]] = None
 
     def get_tetrimino(self):
         if not self.tetrimino or self.tetrimino.locked:
@@ -317,6 +331,16 @@ class Game(Widget):
             self.tetrimino = Tetrimino(shape, tile, self.screen, self.offset)
 
         return self.tetrimino
+
+    def stash(self) -> Tuple[Shapes, Surface]:
+        stashed, self.stashed = self.stashed, (self.tetrimino.shape, self.tetrimino.tile)
+        if stashed:
+            shape, tile = stashed
+            self.tetrimino = Tetrimino(shape, tile, self.screen, self.offset)
+        else:
+            self.tetrimino = None
+        return self.stashed
+
 
     def get_full_board(self, include_borders=False):
         full_board = (right_border | left_border) if include_borders else 0
@@ -347,7 +371,6 @@ class Game(Widget):
         return collision_zone & obj > 0
 
     def clear_lines(self):
-
         line_filter = bottom_border << COLUMNS
         while line_filter < top_border:
             all_tiles = self.tiles

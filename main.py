@@ -29,6 +29,7 @@ def main():
     stashed_tetrimino = TetriminoDisplay(screen, (100, 100))
     next_tetrimino = TetriminoDisplay(screen, (1000, 100))
     game = Game(screen, (500, 100), shape_generator)
+    can_stash = True
 
     clock = pygame.time.Clock()
     start_time = pygame.time.get_ticks()
@@ -37,7 +38,6 @@ def main():
         screen.fill((0, 0, 0))
         events = pygame.event.get()
 
-        stashed_tetrimino.set_tetrimino(*shape_generator.peek())
         next_tetrimino.set_tetrimino(*shape_generator.peek())
 
         active_tetrimino = game.get_tetrimino()
@@ -56,12 +56,17 @@ def main():
                     # drop_sound.play()
                 if event.key == pygame.K_UP:
                     game.rotate()
+                if event.key == pygame.K_RETURN and can_stash:
+                    can_stash = False
+                    stash = game.stash()
+                    stashed_tetrimino.set_tetrimino(*stash)
 
         if pygame.time.get_ticks() - start_time > 300:
             game.move_down()
             start_time = pygame.time.get_ticks()
 
         if active_tetrimino.locked:
+            can_stash = True
             game.clear_lines()
 
         screen.fill((0, 0, 0))
