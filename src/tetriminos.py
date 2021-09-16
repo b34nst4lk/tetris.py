@@ -116,6 +116,8 @@ def render(
         rect = tile.get_rect()
 
         x, y = bitboard_to_coords(bit, rows, columns)
+        if x < 0 or y < 0:
+            continue
         offset_x, offset_y = offset
         x += offset_x
         y += offset_y
@@ -123,7 +125,6 @@ def render(
         rect.update((x, y), TILE_SIZE)
 
         screen.blit(tile, rect)
-
 
 
 @dataclass
