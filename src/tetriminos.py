@@ -125,26 +125,6 @@ def render(
         screen.blit(tile, rect)
 
 
-@dataclass
-class Tile:
-    bitboard: int
-    rect: Rect
-    tile: Surface
-    screen: pygame.display
-    offset: Tuple[int, int]
-    rows: int = ROWS
-    columns: int = COLUMNS
-
-    def render(self, bitboard: Optional[int] = None):
-        if not bitboard:
-            bitboard = self.bitboard
-
-        x, y = bitboard_to_coords(bitboard, self.rows, self.columns)
-        offset_x, offset_y = self.offset
-        self.rect.update((x + offset_x, y + offset_y), TILE_SIZE)
-        self.screen.blit(self.tile, self.rect)
-        self.bitboard = bitboard
-
 
 @dataclass
 class Tetrimino:
