@@ -50,6 +50,10 @@ for color in COLORS:
 
 tiles = cycle(_tiles)
 
+black_tile_path = asset_resource_path("Black.png")
+black_tile = pygame.image.load(black_tile_path)
+black_tile = pygame.transform.scale(black_tile, (TILE_WIDTH, TILE_HEIGHT))
+
 
 class Shapes(Enum):
     i = "i"
@@ -99,11 +103,17 @@ tetriminos: Dict[Shapes, List[List[int]]] = {
     ],
 }
 
+trimmed_tetriminos: Dict[Shapes, List[List[int]]] = {}
+for key, arrangement in tetriminos.items():
+    trimmed_tetriminos[key] = [row for row in arrangement if sum(row) > 0]
 
 tetriminos_widths: Dict[Shapes, int] = {}
 for key, arrangement in tetriminos.items():
     tetriminos_widths[key] = len(arrangement[0])
 
+tetriminos_height: Dict[Shapes, int] = {}
+for key, arrangement in trimmed_tetriminos.items():
+    tetriminos_height[key] = len(arrangement)
 
 def render(
     screen: pygame.display,
@@ -133,22 +143,24 @@ class Tetrimino:
     tile: pygame.Surface
     screen: pygame.display
     offset: Tuple[int, int]
-    bitboard: int = 0
-    rotation: int = 0
+    arrangement: List[List[int]]
     columns: int = COLUMNS
     rows: int = ROWS
     locked: bool = False
 
     def __post_init__(self):
-        arrangement = tetriminos[self.shape]
-        bitboard = arrangement_to_bit(arrangement, self.columns)
-        self.bitboard = bitboard << (
+        self.bitboard = arrangement_to_bit(self.arrangement, self.columns)
+        self.tiles: Dict[int, Surface] = {}
+        self.rotation: int = 0
+        for bit in decompose_bits(self.bitboard):
+            self.tiles[bit] = self.tile.copy()
+
+    def move_to_start(self):
+        self.bitboard = self.bitboard << (
             self.columns * (self.rows - 1) - self.columns // 2 - 2
         )
 
-        self.tiles: Dict[int, Surface] = {}
-        for bit in decompose_bits(self.bitboard):
-            self.tiles[bit] = self.tile.copy()
+        self.update_tiles()
 
     def render(self):
         render(self.screen, self.tiles, self.offset, self.rows, self.columns)
@@ -288,7 +300,7 @@ class TetriminoDisplay(Widget):
             | widget_right_border
         )
 
-        tile = next(tiles)
+        tile = black_tile
         self.tiles = {}
         for bit in decompose_bits(borders):
             self.tiles[bit] = tile.copy()
@@ -303,17 +315,20 @@ class TetriminoDisplay(Widget):
         ):
             return
 
+        tetrimno_column = tetriminos_widths[shape]
+        tetrimno_row = tetriminos_height[shape]
+        offset_x = (self.columns - tetrimno_column) / 2  * TILE_WIDTH + self.offset[0]
+        offset_y = (self.rows - tetrimno_row) / 2 * TILE_HEIGHT + self.offset[1]
+        arrangement = trimmed_tetriminos[shape] 
+
         self.tetrimino = Tetrimino(
-            shape, tile, self.screen, self.offset, columns=self.columns, rows=self.rows
+            shape, tile, self.screen, (offset_x, offset_y), arrangement, columns=tetriminos_widths[shape], rows=tetriminos_height[shape]
         )
-        self.tetrimino.move_down()
-        self.tetrimino.move_down()
-        self.tetrimino.move_down()
 
     def render(self):
         render(self.screen, self.tiles, self.offset, self.rows, self.columns)
         if self.tetrimino:
-            render(self.screen, self.tetrimino.tiles, self.offset, self.rows, self.columns)
+            self.tetrimino.render()
 
 
 @dataclass
@@ -328,7 +343,9 @@ class Game(Widget):
     def get_tetrimino(self):
         if not self.tetrimino or self.tetrimino.locked:
             shape, tile = next(self.shape_generator)
-            self.tetrimino = Tetrimino(shape, tile, self.screen, self.offset)
+            arrangement = tetriminos[shape]
+            self.tetrimino = Tetrimino(shape, tile, self.screen, self.offset, arrangement)
+            self.tetrimino.move_to_start()
 
         return self.tetrimino
 
@@ -336,7 +353,9 @@ class Game(Widget):
         stashed, self.stashed = self.stashed, (self.tetrimino.shape, self.tetrimino.tile)
         if stashed:
             shape, tile = stashed
-            self.tetrimino = Tetrimino(shape, tile, self.screen, self.offset)
+            arrangement = tetriminos[shape]
+            self.tetrimino = Tetrimino(shape, tile, self.screen, self.offset, arrangement)
+            self.tetrimino.move_to_start()
         else:
             self.tetrimino = None
         return self.stashed
