@@ -99,27 +99,32 @@ def bitboard_to_column(bitboard: int, columns: int = COLUMNS, rows: int = ROWS) 
     return columns - column
 
 
-def bitboard_bottom(bitboard: int) -> int:
+def bitboard_bottom(bitboard: int, rows: int = ROWS, columns: int = COLUMNS) -> int:
     if bitboard == 0:
         return 0
 
-    for row in range(ROWS):
+    for row in range(rows):
         if bitboard & bottom_border > 0:
             return row
-        bitboard >>= COLUMNS
-    return ROWS
+        bitboard >>= columns
+    return rows
 
 
-def bitboard_top(bitboard: int) -> int:
+def bitboard_top(bitboard: int, rows: int = ROWS, columns: int = COLUMNS) -> int:
     if bitboard == 0:
         return 0
 
-    for row in range(ROWS):
-        if bitboard >> COLUMNS == 0:
+    for row in range(rows):
+        if bitboard >> columns == 0:
             return row
-        bitboard >>= COLUMNS
+        bitboard >>= columns
 
-    return ROWS
+    return rows
+
+def bitboard_height(bitboard: int, rows: int = ROWS, columns: int = COLUMNS):
+    top = bitboard_top(bitboard, rows, columns)
+    bottom = bitboard_bottom(bitboard, rows, columns)
+    return top - bottom + 1
 
 
 def bitboard_line_filters(start, end) -> List[int]:

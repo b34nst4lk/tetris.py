@@ -440,7 +440,8 @@ class Game(Widget):
                     bit: tile for bit, tile in all_tiles.items() if bit < line_filter
                 }
                 self.tiles = shifted_tiles | static_tiles
-        return cleared_lines
+
+        return lines_cleared
 
     def _move_down(self, tetrimino: Tetrimino) -> Tetrimino:
         if self.collide_bottom(tetrimino, bottom_border):
