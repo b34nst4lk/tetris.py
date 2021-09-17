@@ -1,5 +1,7 @@
 import pygame
 
+from typing import List
+
 from src.tetriminos import (
     Game,
     TetriminoDisplay,
@@ -14,6 +16,11 @@ from src.settings import (
 
 from src.utils import asset_resource_path
 
+def calculate_score(lines_cleared: List[int]) -> int:
+    total_score = 0
+    for i in lines_cleared:
+        total_score += int(2 ** (i - 1) * 1000) 
+    return total_score
 
 def main():
     pygame.init()
@@ -33,6 +40,12 @@ def main():
 
     clock = pygame.time.Clock()
     start_time = pygame.time.get_ticks()
+    total_score = 0
+
+    # initialize font; must be called after 'pygame.init()' to avoid 'Font not Initialized' error
+    myfont = pygame.font.SysFont("monospace", 50)
+
+    # render text
 
     while running:
         screen.fill((0, 0, 0))
@@ -67,14 +80,17 @@ def main():
 
         if active_tetrimino.locked:
             can_stash = True
-            game.clear_lines()
+            lines_cleared = game.clear_lines()
+            total_score += calculate_score(lines_cleared)
+            print(total_score)
 
         screen.fill((0, 0, 0))
         game.render()
         stashed_tetrimino.render()
         next_tetrimino.render()
+        label = myfont.render(f"{total_score}", 1, (255,255,255))
+        screen.blit(label, (460, 50))
         pygame.display.flip()
-        # break
 
         if game.is_game_over():
             game_over()

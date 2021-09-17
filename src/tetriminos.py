@@ -24,6 +24,7 @@ from src.utils import asset_resource_path
 
 from src.bitboard import (
     arrangement_to_bit,
+    bitboard_height,
     bitboard_to_coords,
     bottom_border,
     decompose_bits,
@@ -401,32 +402,45 @@ class Game(Widget):
         return collision_zone & obj > 0
 
     def clear_lines(self):
-        line_filter = bottom_border << COLUMNS
-        while line_filter < top_border:
-            all_tiles = self.tiles
-            full_board = self.get_full_board(include_borders=True)
+        line_filters = []
+        for i in range(1, 5):
+            line_filter = 0
+            for j in range(i):
+                line_filter |= bottom_border << COLUMNS * j
+            
+            line_filters.append(line_filter)
+        line_filters = reversed(line_filters)
+        lines_cleared = []
 
-            if (line_filter & full_board) != line_filter:
-                line_filter <<= COLUMNS
-                continue
+        for line_filter in line_filters:
+            height = bitboard_height(line_filter)
+            while line_filter < top_border:
+                all_tiles = self.tiles
+                full_board = self.get_full_board(include_borders=True)
 
-            for bit in decompose_bits(line_filter):
-                if bit in all_tiles:
-                    del all_tiles[bit]
+                if (line_filter & full_board) != line_filter:
+                    line_filter <<= COLUMNS
+                    continue
+                lines_cleared.append(height)
 
-            shift_tiles = {
-                bit: tile for bit, tile in all_tiles.items() if bit > line_filter
-            }
+                for bit in decompose_bits(line_filter):
+                    if bit in all_tiles:
+                        del all_tiles[bit]
 
-            shifted_tiles: Dict[int, Surface] = {}
-            for bit, tile in shift_tiles.items():
-                bit >>= COLUMNS
-                shifted_tiles[bit] = tile
+                shift_tiles = {
+                    bit: tile for bit, tile in all_tiles.items() if bit > line_filter
+                }
 
-            static_tiles = {
-                bit: tile for bit, tile in all_tiles.items() if bit < line_filter
-            }
-            self.tiles = shifted_tiles | static_tiles
+                shifted_tiles: Dict[int, Surface] = {}
+                for bit, tile in shift_tiles.items():
+                    bit >>= height * COLUMNS
+                    shifted_tiles[bit] = tile
+
+                static_tiles = {
+                    bit: tile for bit, tile in all_tiles.items() if bit < line_filter
+                }
+                self.tiles = shifted_tiles | static_tiles
+        return cleared_lines
 
     def _move_down(self, tetrimino: Tetrimino) -> Tetrimino:
         if self.collide_bottom(tetrimino, bottom_border):

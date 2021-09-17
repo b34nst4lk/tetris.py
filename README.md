@@ -28,15 +28,15 @@ What this allows me to do is I can have a number that represents the state of th
     - [x] Render effect of dropping tiles
     - [x] BUG: Clearing more than 1 line results in negative shift count bug
 
-- [ ] Game UI
+- [x] Game UI
     - [x] Center main game in middle of screen
     - [x] Add next piece UI
     - [x] Add stashed piece UI
-    - [ ] Add score counter
+    - [x] Add score counter
 
 - [ ] Scoring
-    - [ ] Implement scoring mechanism based on lines cleared
-    - [ ] Render scores
+    - [x] Implement scoring mechanism based on lines cleared
+    - [x] Render scores
     - [ ] (?) scoreboard
 
 - [x] Piece stash
