@@ -39,14 +39,17 @@ background = pygame.image.load(background_path)
 background = pygame.transform.scale(background, SIZE)
 
 COLORS = ["Blue", "Green", "LightBlue", "Orange", "Purple", "Red", "Yellow"]
-_tiles = []
+tiles = {}
+ghost_tiles = {}
 for color in COLORS:
     tile_path = asset_resource_path(f"{color}.png")
     tile = pygame.image.load(tile_path)
     tile = pygame.transform.scale(tile, (TILE_WIDTH, TILE_HEIGHT))
-    _tiles.append(tile)
+    tiles[color] = tile
+    ghost_tiles[color] = tile.copy()
+    ghost_tiles[color].set_alpha(128)
 
-tiles = cycle(_tiles)
+colors = cycle(COLORS)
 
 black_tile_path = asset_resource_path("Black.png")
 black_tile = pygame.image.load(black_tile_path)
@@ -132,27 +135,77 @@ def render(
         y += offset_y
 
         rect.update((x, y), TILE_SIZE)
-
         screen.blit(tile, rect)
 
 
+
+def shape_generator():
+    bag = []
+    while True:
+        if not bag:
+            bag = list(Shapes)
+            random.shuffle(bag)
+        yield bag.pop(0)
+
+
+class TetriminoQueue:
+    def __init__(self):
+        self.shape_generator = shape_generator()
+        self.queue = [next(self.shape_generator) for _ in range(7)]
+        self.color = next(colors)
+
+    def __iter__(self):
+        return self
+
+    def __next__(self) -> Tuple[Shapes, str]:
+        self.queue.append(next(self.shape_generator))
+        color = self.color
+        self.color = next(colors)
+
+        self.current = self.queue.pop(0), color
+        return self.current
+
+    def peek(self) -> Tuple[Shapes, str]:
+        return self.queue[0], self.color
+
+
+class TetriminoStash:
+    def __init__(self):
+        self.stashed: Optional[Tuple[Shapes, str]] = None
+
+    def stash(self, to_stash) -> Optional[Tuple[Shapes, str]]:
+        stashed, self.stashed = self.stashed, to_stash
+        return stashed
+
+
 @dataclass
-class Tetrimino:
-    shape: Shapes
-    tile: pygame.Surface
+class Widget(ABC):
     screen: pygame.display
     offset: Tuple[int, int]
+
+    @abstractmethod
+    def render(self):
+        pass
+
+@dataclass
+class Tetrimino(Widget):
+    shape: Shapes
+    color: str
     arrangement: List[List[int]]
     columns: int = COLUMNS
     rows: int = ROWS
     placed: bool = False
 
     def __post_init__(self):
+        self.tile = tiles[self.color]
+        self.setup()
+
+    def setup(self):
         self.bitboard = arrangement_to_bit(self.arrangement, self.columns)
         self.tiles: Dict[int, Surface] = {}
         self.rotation: int = 0
         for bit in decompose_bits(self.bitboard):
-            self.tiles[bit] = self.tile.copy()
+            self.tiles[bit] = self.tile
 
     def move_to_start(self):
         self.bitboard = self.bitboard << (
@@ -226,54 +279,25 @@ class Tetrimino:
             self.rotation = 0
         self.update_tiles()
 
-
-def shape_generator():
-    bag = []
-    while True:
-        if not bag:
-            bag = list(Shapes)
-            random.shuffle(bag)
-        yield bag.pop(0)
-
-
-class TetriminoQueue:
-    def __init__(self):
-        self.shape_generator = shape_generator()
-        self.queue = [next(self.shape_generator) for _ in range(7)]
-        self.tile = next(tiles)
-
-    def __iter__(self):
-        return self
-
-    def __next__(self) -> Tuple[Shapes, Surface]:
-        self.queue.append(next(self.shape_generator))
-        tile = self.tile
-        self.tile = next(tiles)
-
-        self.current = self.queue.pop(0), tile
-        return self.current
-
-    def peek(self) -> Tuple[Shapes, Surface]:
-        return self.queue[0], self.tile
-
-
-class TetriminoStash:
-    def __init__(self):
-        self.stashed: Optional[Tuple[Shapes, Surface]] = None
-
-    def stash(self, to_stash) -> Optional[Tuple[Shapes, Surface]]:
-        stashed, self.stashed = self.stashed, to_stash
-        return stashed
-
-
 @dataclass
-class Widget(ABC):
-    screen: pygame.display
-    offset: Tuple[int, int]
+class Ghost(Tetrimino):
+    parent: Optional[Tetrimino] = None
 
-    @abstractmethod
+    def __post_init__(self):
+        self.tile = ghost_tiles[self.color]
+        self.setup()
+
+    def reset(self):
+        self.bitboard = self.parent.bitboard
+        self.update_tiles()
+
+    def update(self, full_board: int):
+        self.reset() 
+        while (self.bitboard >> self.columns) & (full_board | bottom_border) == 0:
+            self.move_down()
+
     def render(self):
-        pass
+        render(self.screen, self.tiles, self.offset, self.rows, self.columns)
 
 
 @dataclass
@@ -305,25 +329,25 @@ class TetriminoDisplay(Widget):
 
         self.tetrimino = None
 
-    def set_tetrimino(self, shape: Shapes, tile: Surface):
+    def set_tetrimino(self, shape: Shapes, color: str):
         if (
             self.tetrimino
-            and self.tetrimino.tile == tile
+            and self.tetrimino.color == color
             and self.tetrimino.shape == shape
         ):
             return
 
         tetrimno_column = tetriminos_widths[shape]
         tetrimno_row = tetriminos_height[shape]
-        offset_x = (self.columns - tetrimno_column) / 2 * TILE_WIDTH + self.offset[0]
-        offset_y = (self.rows - tetrimno_row) / 2 * TILE_HEIGHT + self.offset[1]
+        offset_x = int((self.columns - tetrimno_column) / 2 * TILE_WIDTH + self.offset[0])
+        offset_y = int((self.rows - tetrimno_row) / 2 * TILE_HEIGHT + self.offset[1])
         arrangement = trimmed_tetriminos[shape]
 
         self.tetrimino = Tetrimino(
-            shape,
-            tile,
             self.screen,
             (offset_x, offset_y),
+            shape,
+            color,
             arrangement,
             columns=tetriminos_widths[shape],
             rows=tetriminos_height[shape],
@@ -334,7 +358,6 @@ class TetriminoDisplay(Widget):
         if self.tetrimino:
             self.tetrimino.render()
 
-
 @dataclass
 class Game(Widget):
     shape_generator: TetriminoQueue
@@ -342,29 +365,33 @@ class Game(Widget):
     def __post_init__(self):
         self.tiles: Dict[int, Surface] = {}
         self.tetrimino: Optional[Tetrimino] = None
-        self.stashed: Optional[Tuple[Shapes, Surface]] = None
+        self.stashed: Optional[Tuple[Shapes, str]] = None
 
     def get_tetrimino(self):
         if not self.tetrimino or self.tetrimino.placed:
-            shape, tile = next(self.shape_generator)
+            shape, color = next(self.shape_generator)
             arrangement = tetriminos[shape]
             self.tetrimino = Tetrimino(
-                shape, tile, self.screen, self.offset, arrangement
+                self.screen, self.offset, shape, color, arrangement
+            )
+            self.ghost = Ghost(
+                self.screen, self.offset, shape, color, arrangement, parent=self.tetrimino
             )
             self.tetrimino.move_to_start()
+            self.ghost.update(self.get_full_board())
 
         return self.tetrimino
 
-    def stash(self) -> Tuple[Shapes, Surface]:
+    def stash(self) -> Tuple[Shapes, str]:
         stashed, self.stashed = self.stashed, (
             self.tetrimino.shape,
-            self.tetrimino.tile,
+            self.tetrimino.color,
         )
         if stashed:
-            shape, tile = stashed
+            shape, color = stashed
             arrangement = tetriminos[shape]
             self.tetrimino = Tetrimino(
-                shape, tile, self.screen, self.offset, arrangement
+                self.screen, self.offset, shape, color, arrangement
             )
             self.tetrimino.move_to_start()
         else:
@@ -441,7 +468,8 @@ class Game(Widget):
 
         return lines_cleared
 
-    def _move_down(self, tetrimino: Tetrimino) -> Tetrimino:
+    def move_down(self) -> Tetrimino:
+        tetrimino = self.get_tetrimino()
         if self.collide_bottom(tetrimino, bottom_border):
             self.tiles |= tetrimino.tiles
             tetrimino.placed = True
@@ -458,11 +486,7 @@ class Game(Widget):
             return tetrimino
 
         tetrimino.move_down()
-        return tetrimino
-
-    def move_down(self):
-        active_tetrimino = self.get_tetrimino()
-        self._move_down(active_tetrimino)
+        self.ghost.update(self.get_full_board())
 
     def move_left(self):
         active_tetrimino = self.get_tetrimino()
@@ -474,6 +498,7 @@ class Game(Widget):
                 return
 
         self.get_tetrimino().move_left()
+        self.ghost.update(self.get_full_board())
 
     def move_right(self):
         active_tetrimino = self.get_tetrimino()
@@ -485,6 +510,7 @@ class Game(Widget):
                 return
 
         self.get_tetrimino().move_right()
+        self.ghost.update(self.get_full_board())
 
     def rotate(self):
         active_tetrimino = self.get_tetrimino()
@@ -501,10 +527,12 @@ class Game(Widget):
                 return
 
         active_tetrimino.set_rotate(test_bitboard)
+        self.ghost.update(self.get_full_board())
 
     def render(self):
         self.screen.blit(background, self.offset)
         self.get_tetrimino().render()
+        self.ghost.render()
         render(self.screen, self.tiles, self.offset)
 
     def is_game_over(self):
