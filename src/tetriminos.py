@@ -322,10 +322,9 @@ class TetriminoDisplay(Widget):
             | widget_right_border
         )
 
-        tile = black_tile
         self.tiles = {}
         for bit in decompose_bits(borders):
-            self.tiles[bit] = tile
+            self.tiles[bit] = black_tile
 
         self.tetrimino = None
 
@@ -393,7 +392,11 @@ class Game(Widget):
             self.tetrimino = Tetrimino(
                 self.screen, self.offset, shape, color, arrangement
             )
+            self.ghost = Ghost(
+                self.screen, self.offset, shape, color, arrangement, parent=self.tetrimino
+            )
             self.tetrimino.move_to_start()
+            self.ghost.update(self.get_full_board())
         else:
             self.tetrimino = None
         return self.stashed
