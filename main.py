@@ -45,7 +45,7 @@ def main():
     # initialize font; must be called after 'pygame.init()' to avoid 'Font not Initialized' error
     myfont = pygame.font.SysFont("monospace", 50)
 
-    # render text
+    locked = False
 
     while running:
         screen.fill((0, 0, 0))
@@ -54,35 +54,38 @@ def main():
         next_tetrimino.set_tetrimino(*shape_generator.peek())
 
         active_tetrimino = game.get_tetrimino()
-        for event in events:
-            if event.type == pygame.KEYDOWN:
-                if event.key in {pygame.K_ESCAPE, ord("q")}:
-                    running = False
-                if event.key == pygame.K_LEFT:
-                    game.move_left()
-                if event.key == pygame.K_RIGHT:
-                    game.move_right()
-                if event.key == pygame.K_DOWN:
-                    game.move_down()
-                if event.key == pygame.K_SPACE:
-                    game.move_down_and_lock()
-                    # drop_sound.play()
-                if event.key == pygame.K_UP:
-                    game.rotate()
-                if event.key == pygame.K_RETURN and can_stash:
-                    can_stash = False
-                    stash = game.stash()
-                    stashed_tetrimino.set_tetrimino(*stash)
+        if not locked:
+            for event in events:
+                if event.type == pygame.KEYDOWN:
+                    if event.key in {pygame.K_ESCAPE, ord("q")}:
+                        running = False
+                    if event.key == pygame.K_LEFT:
+                        game.move_left()
+                    if event.key == pygame.K_RIGHT:
+                        game.move_right()
+                    if event.key == pygame.K_DOWN:
+                        game.move_down()
+                    if event.key == pygame.K_SPACE:
+                        locked = True
+                    if event.key == pygame.K_UP:
+                        game.rotate()
+                    if event.key == pygame.K_RETURN and can_stash:
+                        can_stash = False
+                        stash = game.stash()
+                        stashed_tetrimino.set_tetrimino(*stash)
 
-        if pygame.time.get_ticks() - start_time > 300:
+            if pygame.time.get_ticks() - start_time > 300:
+                game.move_down()
+                start_time = pygame.time.get_ticks()
+
+        else:
             game.move_down()
-            start_time = pygame.time.get_ticks()
 
-        if active_tetrimino.locked:
+        if active_tetrimino.placed:
+            locked = False
             can_stash = True
             lines_cleared = game.clear_lines()
             total_score += calculate_score(lines_cleared)
-            print(total_score)
 
         screen.fill((0, 0, 0))
         game.render()

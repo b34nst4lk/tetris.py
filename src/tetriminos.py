@@ -1,4 +1,3 @@
-from copy import deepcopy
 import random
 from itertools import cycle
 from typing import List, Optional, Dict, Tuple
@@ -8,7 +7,6 @@ import logging
 from enum import Enum
 
 import pygame
-from pygame.rect import Rect
 from pygame.surface import Surface
 
 from src.settings import (
@@ -147,7 +145,7 @@ class Tetrimino:
     arrangement: List[List[int]]
     columns: int = COLUMNS
     rows: int = ROWS
-    locked: bool = False
+    placed: bool = False
 
     def __post_init__(self):
         self.bitboard = arrangement_to_bit(self.arrangement, self.columns)
@@ -303,7 +301,7 @@ class TetriminoDisplay(Widget):
         tile = black_tile
         self.tiles = {}
         for bit in decompose_bits(borders):
-            self.tiles[bit] = tile.copy()
+            self.tiles[bit] = tile
 
         self.tetrimino = None
 
@@ -347,7 +345,7 @@ class Game(Widget):
         self.stashed: Optional[Tuple[Shapes, Surface]] = None
 
     def get_tetrimino(self):
-        if not self.tetrimino or self.tetrimino.locked:
+        if not self.tetrimino or self.tetrimino.placed:
             shape, tile = next(self.shape_generator)
             arrangement = tetriminos[shape]
             self.tetrimino = Tetrimino(
@@ -446,17 +444,17 @@ class Game(Widget):
     def _move_down(self, tetrimino: Tetrimino) -> Tetrimino:
         if self.collide_bottom(tetrimino, bottom_border):
             self.tiles |= tetrimino.tiles
-            tetrimino.locked = True
+            tetrimino.placed = True
             return tetrimino
 
         for bit in self.tiles:
-            if self.collide_bottom(tetrimino, bit) and not tetrimino.locked:
-                tetrimino.locked = True
+            if self.collide_bottom(tetrimino, bit) and not tetrimino.placed:
+                tetrimino.placed = True
                 break
 
-        if tetrimino.locked:
+        if tetrimino.placed:
             self.tiles |= tetrimino.tiles
-            tetrimino.locked = True
+            tetrimino.placed = True
             return tetrimino
 
         tetrimino.move_down()
@@ -487,12 +485,6 @@ class Game(Widget):
                 return
 
         self.get_tetrimino().move_right()
-
-    def move_down_and_lock(self):
-        active_tetrimino = self.get_tetrimino()
-        while not active_tetrimino.locked:
-            self._move_down(active_tetrimino)
-            active_tetrimino.render()
 
     def rotate(self):
         active_tetrimino = self.get_tetrimino()
