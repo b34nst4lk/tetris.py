@@ -19,10 +19,11 @@ from src.settings import (
 
 from src.utils import asset_resource_path
 
+
 def calculate_score(lines_cleared: List[int]) -> int:
     total_score = 0
     for i in lines_cleared:
-        total_score += int(2 ** (i - 1) * 1000) 
+        total_score += int(2 ** (i - 1) * 1000)
     return total_score
 
 
@@ -55,7 +56,7 @@ class Scene(ABC):
     @abstractmethod
     def init_assets(self):
         pass
-    
+
     @abstractmethod
     def update(self):
         pass
@@ -63,7 +64,6 @@ class Scene(ABC):
     @abstractmethod
     def render(self):
         pass
-
 
 
 @dataclass
@@ -84,7 +84,7 @@ class GameScene(Scene):
 
     def init_assets(self):
         self.font = pygame.font.SysFont("monospace", 50)
-   
+
     def update(self):
         self.next_tetrimino.set_tetrimino(*self.shape_generator.peek())
 
@@ -132,9 +132,8 @@ class GameScene(Scene):
         self.matrix.render()
         self.stashed_tetrimino.render()
         self.next_tetrimino.render()
-        label = self.font.render(f"{self.total_score}", 1, (255,255,255))
+        label = self.font.render(f"{self.total_score}", 1, (255, 255, 255))
         self.screen.blit(label, (460, 50))
-
 
 
 def main():
@@ -144,9 +143,9 @@ def main():
     # drop_sound = pygame.mixer.Sound(asset_resource_path("drop.wav"))
     # pygame.mixer.music.load(asset_resource_path("bgm.wav"))
     # pygame.mixer.music.play(-1)
-    
+
     game_scene = GameScene(screen)
-    game_scene.run() 
+    game_scene.run()
     pygame.quit()
 
 

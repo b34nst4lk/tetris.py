@@ -138,7 +138,6 @@ def render(
         screen.blit(tile, rect)
 
 
-
 def shape_generator():
     bag = []
     while True:
@@ -186,6 +185,7 @@ class Widget(ABC):
     @abstractmethod
     def render(self):
         pass
+
 
 @dataclass
 class Tetrimino(Widget):
@@ -279,6 +279,7 @@ class Tetrimino(Widget):
             self.rotation = 0
         self.update_tiles()
 
+
 @dataclass
 class Ghost(Tetrimino):
     parent: Optional[Tetrimino] = None
@@ -292,7 +293,7 @@ class Ghost(Tetrimino):
         self.update_tiles()
 
     def update(self, full_board: int):
-        self.reset() 
+        self.reset()
         while (self.bitboard >> self.columns) & (full_board | bottom_border) == 0:
             self.move_down()
 
@@ -338,7 +339,9 @@ class TetriminoDisplay(Widget):
 
         tetrimno_column = tetriminos_widths[shape]
         tetrimno_row = tetriminos_height[shape]
-        offset_x = int((self.columns - tetrimno_column) / 2 * TILE_WIDTH + self.offset[0])
+        offset_x = int(
+            (self.columns - tetrimno_column) / 2 * TILE_WIDTH + self.offset[0]
+        )
         offset_y = int((self.rows - tetrimno_row) / 2 * TILE_HEIGHT + self.offset[1])
         arrangement = trimmed_tetriminos[shape]
 
@@ -357,6 +360,7 @@ class TetriminoDisplay(Widget):
         if self.tetrimino:
             self.tetrimino.render()
 
+
 @dataclass
 class Matrix(Widget):
     shape_generator: TetriminoQueue
@@ -374,7 +378,12 @@ class Matrix(Widget):
                 self.screen, self.offset, shape, color, arrangement
             )
             self.ghost = Ghost(
-                self.screen, self.offset, shape, color, arrangement, parent=self.tetrimino
+                self.screen,
+                self.offset,
+                shape,
+                color,
+                arrangement,
+                parent=self.tetrimino,
             )
             self.tetrimino.move_to_start()
             self.ghost.update(self.get_full_board())
@@ -393,7 +402,12 @@ class Matrix(Widget):
                 self.screen, self.offset, shape, color, arrangement
             )
             self.ghost = Ghost(
-                self.screen, self.offset, shape, color, arrangement, parent=self.tetrimino
+                self.screen,
+                self.offset,
+                shape,
+                color,
+                arrangement,
+                parent=self.tetrimino,
             )
             self.tetrimino.move_to_start()
             self.ghost.update(self.get_full_board())
@@ -435,7 +449,7 @@ class Matrix(Widget):
             line_filter = 0
             for j in range(i):
                 line_filter |= bottom_border << COLUMNS * j
-            
+
             line_filters.append(line_filter)
         line_filters = reversed(line_filters)
         lines_cleared = []

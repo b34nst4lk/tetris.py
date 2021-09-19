@@ -121,6 +121,7 @@ def bitboard_top(bitboard: int, rows: int = ROWS, columns: int = COLUMNS) -> int
 
     return rows
 
+
 def bitboard_height(bitboard: int, rows: int = ROWS, columns: int = COLUMNS):
     top = bitboard_top(bitboard, rows, columns)
     bottom = bitboard_bottom(bitboard, rows, columns)
