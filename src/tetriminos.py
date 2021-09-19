@@ -188,6 +188,19 @@ class Widget(ABC):
 
 
 @dataclass
+class Text(Widget):
+    font: pygame.font.Font
+    text: str = ""
+
+    def set_text(self, text):
+        self.text = str(text)
+
+    def render(self):
+        text = self.font.render(self.text, 1, (255, 255, 255))
+        self.screen.blit(text, self.offset)
+
+
+@dataclass
 class Tetrimino(Widget):
     shape: Shapes
     color: str

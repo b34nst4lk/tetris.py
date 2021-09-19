@@ -1,6 +1,6 @@
 import pygame
 
-from typing import List
+from typing import List, Tuple, Dict, Any, Optional
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
 
@@ -8,6 +8,7 @@ from src.tetriminos import (
     Matrix,
     TetriminoDisplay,
     TetriminoQueue,
+    Text,
     game_over,
 )
 
@@ -32,34 +33,36 @@ class Scene(ABC):
     screen: pygame.display
 
     def __post_init__(self):
-        self.init_widgets()
-        self.init_state()
         self.init_assets()
+        self.init_state()
+        self.init_widgets()
         self.clock = pygame.time.Clock()
         self.running = True
 
     def run(self):
         while self.running:
-            self.update()
+            next_scene, params = self.update()
+            if next_scene:
+                return next_scene, params
             self.render()
             pygame.display.flip()
             self.clock.tick(FPS)
 
-    @abstractmethod
     def init_widgets(self):
         pass
 
-    @abstractmethod
     def init_state(self):
         pass
 
-    @abstractmethod
     def init_assets(self):
         pass
 
-    @abstractmethod
-    def update(self):
-        pass
+    def update(self) -> Tuple[Optional[str], Optional[Dict[str, Any]]]:
+        for event in pygame.event.get():
+            if event.type == pygame.KEYDOWN:
+                if event.key in {pygame.K_ESCAPE, ord("q")}:
+                    self.running = False
+        return None, None
 
     @abstractmethod
     def render(self):
@@ -73,6 +76,7 @@ class GameScene(Scene):
         self.stashed_tetrimino = TetriminoDisplay(self.screen, (40, 100))
         self.matrix = Matrix(self.screen, (400, 100), self.shape_generator)
         self.next_tetrimino = TetriminoDisplay(self.screen, (920, 100))
+        self.score = Text(self.screen, (500, 50), self.font, "0")
 
     def init_state(self):
         self.running = True
@@ -121,10 +125,13 @@ class GameScene(Scene):
             self.can_stash = True
             lines_cleared = self.matrix.clear_lines()
             self.total_score += calculate_score(lines_cleared)
+            self.score.set_text(self.total_score)
 
         if self.matrix.is_game_over():
-            game_over()
             self.running = False
+            return "game_over", {"score": self.total_score}
+        
+        return None, None
 
     def render(self):
         self.screen.fill((0, 0, 0))
@@ -132,9 +139,23 @@ class GameScene(Scene):
         self.matrix.render()
         self.stashed_tetrimino.render()
         self.next_tetrimino.render()
-        label = self.font.render(f"{self.total_score}", 1, (255, 255, 255))
-        self.screen.blit(label, (460, 50))
+        self.score.render()
 
+
+@dataclass
+class GameOverScene(Scene):
+    score: int
+
+    def init_assets(self):
+        self.font = pygame.font.SysFont("monospace", 50)
+
+    def init_widgets(self):
+        self.game_over = Text(self.screen, (500, 500), self.font, "GAME OVER")
+        self.score_text = Text(self.screen, (500, 700), self.font, str(self.score))
+   
+    def render(self):
+        self.game_over.render()
+        self.score_text.render()
 
 def main():
     pygame.init()
@@ -144,8 +165,20 @@ def main():
     # pygame.mixer.music.load(asset_resource_path("bgm.wav"))
     # pygame.mixer.music.play(-1)
 
-    game_scene = GameScene(screen)
-    game_scene.run()
+    scenes = {
+        "game": GameScene,
+        "game_over": GameOverScene,
+    }
+    
+    scene = scenes["game"](screen)
+
+    running = True
+    while running:
+        next_scene_key, params = scene.run()    
+        if not next_scene_key:
+            break
+        scene = scenes[next_scene_key](screen, **params)
+
     pygame.quit()
 
 
