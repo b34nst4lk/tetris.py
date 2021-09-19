@@ -33,6 +33,7 @@ What this allows me to do is I can have a number that represents the state of th
     - [x] Add next piece UI
     - [x] Add stashed piece UI
     - [x] Add score counter
+    - [x] Add ghost piece
 
 - [ ] Scoring
     - [x] Implement scoring mechanism based on lines cleared

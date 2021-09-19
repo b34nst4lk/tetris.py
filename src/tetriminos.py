@@ -358,7 +358,7 @@ class TetriminoDisplay(Widget):
             self.tetrimino.render()
 
 @dataclass
-class Game(Widget):
+class Matrix(Widget):
     shape_generator: TetriminoQueue
 
     def __post_init__(self):
