@@ -143,7 +143,11 @@ def bitboard_line_filters(start, end) -> List[int]:
 
 
 def bitboard_to_coords(
-    bitboard: int, rows: int = ROWS, columns: int = COLUMNS
+    bitboard: int,
+    rows: int = ROWS,
+    columns: int = COLUMNS,
+    tile_width: int = TILE_WIDTH,
+    tile_height: int = TILE_HEIGHT,
 ) -> Tuple[int, int]:
     only_one_bit = len(decompose_bits(bitboard)) == 1
     if not only_one_bit:
@@ -152,7 +156,7 @@ def bitboard_to_coords(
     row = bitboard_to_row(bitboard, rows, columns)
     column = bitboard_to_column(bitboard, columns)
 
-    coords = (column * TILE_WIDTH, row * TILE_HEIGHT)
+    coords = (column * tile_width, row * tile_height)
     return coords
 
 

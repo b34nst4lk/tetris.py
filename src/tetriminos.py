@@ -16,9 +16,10 @@ from src.settings import (
     TILE_HEIGHT,
     TILE_SIZE,
     TILE_WIDTH,
+    SMALL_TILE_SIZE,
 )
 
-from src.utils import asset_resource_path
+from src.utils import asset_resource_path, draw_outline
 
 from src.bitboard import (
     arrangement_to_bit,
@@ -41,19 +42,25 @@ background = pygame.transform.scale(background, SIZE)
 COLORS = ["Blue", "Green", "LightBlue", "Orange", "Purple", "Red", "Yellow"]
 tiles = {}
 ghost_tiles = {}
+small_tiles = {}
 for color in COLORS:
     tile_path = asset_resource_path(f"{color}.png")
     tile = pygame.image.load(tile_path)
-    tile = pygame.transform.scale(tile, (TILE_WIDTH, TILE_HEIGHT))
+    tile = pygame.transform.scale(tile, TILE_SIZE)
     tiles[color] = tile
+
     ghost_tiles[color] = tile.copy()
     ghost_tiles[color].set_alpha(128)
+
+    small_tile = tile.copy()
+    small_tile = pygame.transform.scale(small_tile, SMALL_TILE_SIZE)
+    small_tiles[color] = small_tile
 
 colors = cycle(COLORS)
 
 black_tile_path = asset_resource_path("Black.png")
 black_tile = pygame.image.load(black_tile_path)
-black_tile = pygame.transform.scale(black_tile, (TILE_WIDTH, TILE_HEIGHT))
+black_tile = pygame.transform.scale(black_tile, SMALL_TILE_SIZE)
 
 
 class Shapes(Enum):
@@ -123,18 +130,20 @@ def render(
     offset,
     rows: int = ROWS,
     columns: int = COLUMNS,
+    tile_size: Tuple[int, int] = TILE_SIZE,
 ):
     for bit, tile in bits_and_tiles.items():
         rect = tile.get_rect()
 
-        x, y = bitboard_to_coords(bit, rows, columns)
+        tile_width, tile_height = tile_size
+        x, y = bitboard_to_coords(bit, rows, columns, tile_width, tile_height)
         if x < 0 or y < 0:
             continue
         offset_x, offset_y = offset
         x += offset_x
         y += offset_y
 
-        rect.update((x, y), TILE_SIZE)
+        rect.update((x, y), tile_size)
         screen.blit(tile, rect)
 
 
@@ -189,15 +198,25 @@ class Widget(ABC):
 
 @dataclass
 class Text(Widget):
+    size: Tuple[int, int]
     font: pygame.font.Font
     text: str = ""
+    centered: bool = True
+
+    def __post_init__(self):
+        self.rect = pygame.rect.Rect(self.offset, self.size)
 
     def set_text(self, text):
         self.text = str(text)
 
     def render(self):
         text = self.font.render(self.text, 1, (255, 255, 255))
-        self.screen.blit(text, self.offset)
+        x, y = self.offset
+        if self.centered:
+            x += self.rect.width / 2
+            y += self.rect.height / 2
+        draw_outline(self.screen, self.rect)
+        self.screen.blit(text, text.get_rect(center=(x, y)))
 
 
 @dataclass
@@ -207,10 +226,16 @@ class Tetrimino(Widget):
     arrangement: List[List[int]]
     columns: int = COLUMNS
     rows: int = ROWS
+    size: str = "normal"
     placed: bool = False
 
     def __post_init__(self):
-        self.tile = tiles[self.color]
+        if self.size == "normal":
+            self.tile = tiles[self.color]
+            self.tile_size = TILE_SIZE
+        else: 
+            self.tile = small_tiles[self.color]
+            self.tile_size = SMALL_TILE_SIZE
         self.setup()
 
     def setup(self):
@@ -228,7 +253,7 @@ class Tetrimino(Widget):
         self.update_tiles()
 
     def render(self):
-        render(self.screen, self.tiles, self.offset, self.rows, self.columns)
+        render(self.screen, self.tiles, self.offset, self.rows, self.columns, tile_size=self.tile_size)
 
     def update_tiles(self):
         tiles: Dict[int, Surface] = {}
@@ -316,6 +341,8 @@ class Ghost(Tetrimino):
 
 @dataclass
 class TetriminoDisplay(Widget):
+    tile_size: Tuple[int, int] = SMALL_TILE_SIZE
+
     def __post_init__(self):
         self.columns = 8
         self.rows = 6
@@ -352,10 +379,11 @@ class TetriminoDisplay(Widget):
 
         tetrimno_column = tetriminos_widths[shape]
         tetrimno_row = tetriminos_height[shape]
+        tile_width, tile_height = self.tile_size
         offset_x = int(
-            (self.columns - tetrimno_column) / 2 * TILE_WIDTH + self.offset[0]
+            (self.columns - tetrimno_column) / 2 * tile_width + self.offset[0]
         )
-        offset_y = int((self.rows - tetrimno_row) / 2 * TILE_HEIGHT + self.offset[1])
+        offset_y = int((self.rows - tetrimno_row) / 2 * tile_height + self.offset[1])
         arrangement = trimmed_tetriminos[shape]
 
         self.tetrimino = Tetrimino(
@@ -366,10 +394,11 @@ class TetriminoDisplay(Widget):
             arrangement,
             columns=tetriminos_widths[shape],
             rows=tetriminos_height[shape],
+            size="small"
         )
 
     def render(self):
-        render(self.screen, self.tiles, self.offset, self.rows, self.columns)
+        render(self.screen, self.tiles, self.offset, self.rows, self.columns, tile_size=self.tile_size)
         if self.tetrimino:
             self.tetrimino.render()
 
@@ -498,12 +527,12 @@ class Matrix(Widget):
 
         return lines_cleared
 
-    def move_down(self) -> Tetrimino:
+    def move_down(self):
         tetrimino = self.get_tetrimino()
         if self.collide_bottom(tetrimino, bottom_border):
             self.tiles |= tetrimino.tiles
             tetrimino.placed = True
-            return tetrimino
+            return
 
         for bit in self.tiles:
             if self.collide_bottom(tetrimino, bit) and not tetrimino.placed:

@@ -73,10 +73,10 @@ class Scene(ABC):
 class GameScene(Scene):
     def init_widgets(self):
         self.shape_generator = TetriminoQueue()
-        self.stashed_tetrimino = TetriminoDisplay(self.screen, (40, 100))
-        self.matrix = Matrix(self.screen, (400, 100), self.shape_generator)
-        self.next_tetrimino = TetriminoDisplay(self.screen, (920, 100))
-        self.score = Text(self.screen, (500, 50), self.font, "0")
+        self.stashed_tetrimino = TetriminoDisplay(self.screen, (400, 100))
+        self.matrix = Matrix(self.screen, (400, 260), self.shape_generator)
+        self.next_tetrimino = TetriminoDisplay(self.screen, (720, 100))
+        self.score = Text(self.screen, (560, 100), (160, 120), self.font, "0")
 
     def init_state(self):
         self.running = True
@@ -87,7 +87,7 @@ class GameScene(Scene):
         self.start_time = pygame.time.get_ticks()
 
     def init_assets(self):
-        self.font = pygame.font.SysFont("monospace", 50)
+        self.font = pygame.font.SysFont("monospace", 34)
 
     def update(self):
         self.next_tetrimino.set_tetrimino(*self.shape_generator.peek())
@@ -150,8 +150,8 @@ class GameOverScene(Scene):
         self.font = pygame.font.SysFont("monospace", 50)
 
     def init_widgets(self):
-        self.game_over = Text(self.screen, (500, 500), self.font, "GAME OVER")
-        self.score_text = Text(self.screen, (500, 700), self.font, str(self.score))
+        self.game_over = Text(self.screen, (500, 500), (160, 120),self.font, "GAME OVER")
+        self.score_text = Text(self.screen, (500, 700), (160, 120), self.font, str(self.score))
    
     def render(self):
         self.game_over.render()
@@ -159,7 +159,7 @@ class GameOverScene(Scene):
 
 def main():
     pygame.init()
-    screen = pygame.display.set_mode((WIDTH + 800, HEIGHT + 200))
+    screen = pygame.display.set_mode((WIDTH + 800, HEIGHT + 400))
 
     # drop_sound = pygame.mixer.Sound(asset_resource_path("drop.wav"))
     # pygame.mixer.music.load(asset_resource_path("bgm.wav"))
