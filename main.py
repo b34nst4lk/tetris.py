@@ -4,12 +4,13 @@ from typing import List, Tuple, Dict, Any, Optional
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
 
+from src.levels import get_snes_speed
+
 from src.tetriminos import (
     Matrix,
     TetriminoDisplay,
     TetriminoQueue,
     Text,
-    game_over,
 )
 
 from src.settings import (
@@ -83,6 +84,7 @@ class GameScene(Scene):
         self.can_stash = True
         self.locked = False
         self.total_score = 0
+        self.lines_cleared = 130
 
         self.start_time = pygame.time.get_ticks()
 
@@ -113,7 +115,7 @@ class GameScene(Scene):
                         stash = self.matrix.stash()
                         self.stashed_tetrimino.set_tetrimino(*stash)
 
-            if pygame.time.get_ticks() - self.start_time > 300:
+            if pygame.time.get_ticks() - self.start_time > get_snes_speed(self.lines_cleared // 10):
                 self.matrix.move_down()
                 self.start_time = pygame.time.get_ticks()
 
@@ -124,6 +126,7 @@ class GameScene(Scene):
             self.locked = False
             self.can_stash = True
             lines_cleared = self.matrix.clear_lines()
+            self.lines_cleared += sum(lines_cleared)
             self.total_score += calculate_score(lines_cleared)
             self.score.set_text(self.total_score)
 
