@@ -3,6 +3,8 @@ import sys
 
 import pygame
 
+from src.settings import DEBUG
+
 def asset_resource_path(relative_path):
     if hasattr(sys, "_MEIPASS"):
         base_path = sys._MEIPASS  # type: ignore
@@ -12,6 +14,9 @@ def asset_resource_path(relative_path):
     return os.path.join(base_path, "src", "assets", relative_path)
 
 def draw_outline(screen: pygame.display, rect: pygame.rect.Rect):
+    if not DEBUG:
+        return
+
     coords = [
         (rect.x + 1 , rect.y + 1), # top left
         (rect.x + rect.width - 1, rect.y + 1), # top right

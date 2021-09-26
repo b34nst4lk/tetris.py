@@ -167,7 +167,7 @@ def get_row_filter(width: int):
     return row_filter
 
 
-def rotate_bitboard(bitboard: int, width: int) -> int:
+def rotate_bitboard(bitboard: int, width: int, rotations: int = 1) -> int:
     """
     This function rotates a bitboard that is breath * breath in size clockwise
     """
@@ -175,15 +175,19 @@ def rotate_bitboard(bitboard: int, width: int) -> int:
     i = 0
     row_filter = get_row_filter(width)
 
-    while bitboard > 0:
-        row = bitboard & row_filter
-        row_values = decompose_bits(row)
-        for row_value in row_values:
-            bit_length = row_value.bit_length()
-            shift = (bit_length - 1) * width + (width - i - 1)
-            rotated |= 1 << shift
-        bitboard >>= width
-        i += 1
+    if rotations < 0:
+        rotations = 4 + rotations
+
+    for _ in range(rotations):
+        while bitboard > 0:
+            row = bitboard & row_filter
+            row_values = decompose_bits(row)
+            for row_value in row_values:
+                bit_length = row_value.bit_length()
+                shift = (bit_length - 1) * width + (width - i - 1)
+                rotated |= 1 << shift
+            bitboard >>= width
+            i += 1
     return rotated
 
 

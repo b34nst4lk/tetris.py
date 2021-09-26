@@ -274,14 +274,14 @@ class Tetrimino(Widget):
         self.bitboard >>= 1
         self.update_tiles()
 
-    def test_rotate(self):
+    def test_rotate(self, direction=1):
         # Prepare tetrimino for comparison
         current_rotation = self.rotation
         arrangement = tetriminos[self.shape]
         tetrimino_width = tetriminos_widths[self.shape]
         small_bitboard = arrangement_to_bit(arrangement, tetrimino_width)
         for _ in range(current_rotation):
-            small_bitboard = rotate_bitboard(small_bitboard, tetrimino_width)
+            small_bitboard = rotate_bitboard(small_bitboard, tetrimino_width, direction)
 
         compare_bitboard = widen_bitboard_width(
             small_bitboard, tetrimino_width, self.columns
@@ -571,9 +571,9 @@ class Matrix(Widget):
         self.get_tetrimino().move_right()
         self.ghost.update(self.get_full_board())
 
-    def rotate(self):
+    def rotate(self, direction: int=1):
         active_tetrimino = self.get_tetrimino()
-        test_bitboard = active_tetrimino.test_rotate()
+        test_bitboard = active_tetrimino.test_rotate(direction)
 
         full_board = self.get_full_board(include_borders=True)
 

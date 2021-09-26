@@ -4,7 +4,7 @@ from typing import List, Tuple, Dict, Any, Optional
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
 
-from src.levels import get_snes_speed
+from src.levels import SNES
 
 from src.tetriminos import (
     Matrix,
@@ -77,19 +77,25 @@ class GameScene(Scene):
         self.stashed_tetrimino = TetriminoDisplay(self.screen, (400, 100))
         self.matrix = Matrix(self.screen, (400, 260), self.shape_generator)
         self.next_tetrimino = TetriminoDisplay(self.screen, (720, 100))
-        self.score = Text(self.screen, (560, 100), (160, 120), self.font, "0")
+        self.score_text = Text(self.screen, (560, 100), (160, 60), self.font, "0")
+        self.level_text = Text(self.screen, (560, 160), (160, 60), self.font, f"Level {self.level}")
+
 
     def init_state(self):
         self.running = True
         self.can_stash = True
         self.locked = False
         self.total_score = 0
-        self.lines_cleared = 130
+        self.lines_cleared = 0
 
         self.start_time = pygame.time.get_ticks()
 
     def init_assets(self):
         self.font = pygame.font.SysFont("monospace", 34)
+
+    @property
+    def level(self) -> int:
+        return self.lines_cleared // 10
 
     def update(self):
         self.next_tetrimino.set_tetrimino(*self.shape_generator.peek())
@@ -110,25 +116,33 @@ class GameScene(Scene):
                         self.locked = True
                     if event.key == pygame.K_UP:
                         self.matrix.rotate()
+                    # if event.key == ord("s"):
+                    #     self.matrix.rotate()
+                    if event.key == ord("a"):
+                        self.matrix.rotate(-1)
                     if event.key == pygame.K_RETURN and self.can_stash:
                         self.can_stash = False
                         stash = self.matrix.stash()
                         self.stashed_tetrimino.set_tetrimino(*stash)
 
-            if pygame.time.get_ticks() - self.start_time > get_snes_speed(self.lines_cleared // 10):
+            if pygame.time.get_ticks() - self.start_time > SNES.ticks(self.level):
                 self.matrix.move_down()
                 self.start_time = pygame.time.get_ticks()
 
         else:
             self.matrix.move_down()
 
+        lines_cleared = 0
         if active_tetrimino.placed:
             self.locked = False
             self.can_stash = True
             lines_cleared = self.matrix.clear_lines()
+
+        if lines_cleared:
             self.lines_cleared += sum(lines_cleared)
-            self.total_score += calculate_score(lines_cleared)
-            self.score.set_text(self.total_score)
+            self.total_score += SNES.score(lines_cleared, 0, self.level)
+            self.score_text.set_text(self.total_score)
+            self.level_text.set_text(f"Level {self.level}") 
 
         if self.matrix.is_game_over():
             self.running = False
@@ -142,8 +156,8 @@ class GameScene(Scene):
         self.matrix.render()
         self.stashed_tetrimino.render()
         self.next_tetrimino.render()
-        self.score.render()
-
+        self.score_text.render()
+        self.level_text.render()
 
 @dataclass
 class GameOverScene(Scene):
@@ -173,14 +187,14 @@ def main():
         "game_over": GameOverScene,
     }
     
-    scene = scenes["game"](screen)
-
+    next_scene_key, params = "game", {}
     running = True
     while running:
+        scene = scenes[next_scene_key](screen, **params)
+        print(next_scene_key)
         next_scene_key, params = scene.run()    
         if not next_scene_key:
             break
-        scene = scenes[next_scene_key](screen, **params)
 
     pygame.quit()
 
