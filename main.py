@@ -11,6 +11,7 @@ from src.tetriminos import (
     TetriminoDisplay,
     TetriminoQueue,
     Text,
+    ReactiveText,
 )
 
 from src.settings import (
@@ -77,9 +78,10 @@ class GameScene(Scene):
         self.stashed_tetrimino = TetriminoDisplay(self.screen, (400, 100))
         self.matrix = Matrix(self.screen, (400, 260), self.shape_generator)
         self.next_tetrimino = TetriminoDisplay(self.screen, (720, 100))
-        self.score_text = Text(self.screen, (560, 100), (160, 60), self.font, "0")
+        self.score_text = ReactiveText(self.screen, (560, 100), (160, 60), self.font, "0")
         self.level_text = Text(self.screen, (560, 160), (160, 60), self.font, f"Level {self.level}")
-
+    
+        self.mousables = [self.score_text]
 
     def init_state(self):
         self.running = True
@@ -103,6 +105,9 @@ class GameScene(Scene):
         active_tetrimino = self.matrix.get_tetrimino()
         if not self.locked:
             for event in pygame.event.get():
+                if event.type in {pygame.MOUSEMOTION, pygame.MOUSEBUTTONUP, pygame.MOUSEBUTTONDOWN}:
+                    for subscriber in self.mousables:
+                        subscriber.push(event)
                 if event.type == pygame.KEYDOWN:
                     if event.key in {pygame.K_ESCAPE, ord("q")}:
                         self.running = False

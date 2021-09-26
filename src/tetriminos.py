@@ -1,6 +1,6 @@
 import random
 from itertools import cycle
-from typing import List, Optional, Dict, Tuple
+from typing import List, Optional, Dict, Tuple, Callable
 from dataclasses import dataclass
 from abc import abstractmethod, ABC
 import logging
@@ -13,13 +13,11 @@ from src.settings import (
     SIZE,
     COLUMNS,
     ROWS,
-    TILE_HEIGHT,
     TILE_SIZE,
-    TILE_WIDTH,
     SMALL_TILE_SIZE,
 )
 
-from src.utils import asset_resource_path, draw_outline
+from src.utils import asset_resource_path, draw_scaffold, clamp
 
 from src.bitboard import (
     arrangement_to_bit,
@@ -195,7 +193,6 @@ class Widget(ABC):
     def render(self):
         pass
 
-
 @dataclass
 class Text(Widget):
     size: Tuple[int, int]
@@ -215,9 +212,77 @@ class Text(Widget):
         if self.centered:
             x += self.rect.width / 2
             y += self.rect.height / 2
-        draw_outline(self.screen, self.rect)
+        draw_scaffold(self.screen, self.rect)
         self.screen.blit(text, text.get_rect(center=(x, y)))
 
+class MouseInteraction(ABC):
+    def push(self, event):
+        if event.type == pygame.MOUSEMOTION:
+            self.on_move(event)
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            self.on_click(event)
+        elif event.type == pygame.MOUSEBUTTONUP:
+            self.on_release(event)
+
+    @abstractmethod
+    def on_move(self, event):
+        pass
+
+    @abstractmethod
+    def on_click(self, event):
+        pass
+
+    @abstractmethod
+    def on_release(self, event):
+        pass
+
+@dataclass
+class ReactiveText(Text, MouseInteraction):
+    active_function: Callable = lambda time: clamp(time ** 2, 0, 100)
+    inactive_function: Callable = lambda time: 0
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.start = self.end = None
+
+    def on_click(self, event):
+        print("down")
+
+    def on_release(self, event):
+        print("up")
+
+    def on_move(self, event):
+        collide = self.rect.collidepoint(event.pos) == 1
+        if collide and not self.start:
+            self.start = pygame.time.get_ticks()
+            self.end = None
+
+        if not collide:
+            self.start = None
+            self.end = pygame.time.get_ticks()
+
+    def render(self):
+        super().render()
+
+        now = pygame.time.get_ticks()
+        weight = 0
+        if self.start:
+            time_passed = now - self.start
+            weight = self.active_function(time_passed/100)
+        elif self.end:
+            time_passed = now - self.end
+            weight = self.inactive_function(time_passed/100)
+        
+        if not weight:
+            return 
+
+        x1, y1 = self.rect.topleft
+        x2, y2 = self.rect.topright
+
+        mid_x = (100 - weight) / 100 * x1 + (weight/100) * x2
+        mid_y = (100 - weight) / 100 * y1 + (weight/100) * y2
+
+        pygame.draw.line(self.screen, (255,255,255), self.rect.topleft, (mid_x, mid_y))
 
 @dataclass
 class Tetrimino(Widget):
@@ -337,7 +402,6 @@ class Ghost(Tetrimino):
 
     def render(self):
         render(self.screen, self.tiles, self.offset, self.rows, self.columns)
-
 
 @dataclass
 class TetriminoDisplay(Widget):
