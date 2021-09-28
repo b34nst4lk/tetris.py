@@ -395,7 +395,7 @@ class Tetrimino(Widget):
         bitboard = self.bitboard
 
         shift = 0
-        while bitboard & bottom_border == 0:
+        while bitboard & bottom_border(self.columns) == 0:
             bitboard >>= self.columns
             shift += self.columns
 
@@ -436,7 +436,7 @@ class Ghost(Tetrimino):
 
     def update(self, full_board: int):
         self.reset()
-        while (self.bitboard >> self.columns) & (full_board | bottom_border) == 0:
+        while (self.bitboard >> self.columns) & (full_board | bottom_border(self.columns)) == 0:
             self.move_down()
 
     def render(self):
@@ -569,7 +569,7 @@ class Matrix(Widget):
         return self.stashed
 
     def get_full_board(self, include_borders=False):
-        full_board = (right_border | left_border) if include_borders else 0
+        full_board = (right_border(COLUMNS, ROWS) | left_border(COLUMNS, ROWS)) if include_borders else 0
         for tile in self.tiles:
             full_board |= tile
         return full_board
@@ -601,7 +601,7 @@ class Matrix(Widget):
         for i in range(1, 5):
             line_filter = 0
             for j in range(i):
-                line_filter |= bottom_border << COLUMNS * j
+                line_filter |= bottom_border(COLUMNS) << COLUMNS * j
 
             line_filters.append(line_filter)
         line_filters = reversed(line_filters)
@@ -609,7 +609,7 @@ class Matrix(Widget):
 
         for line_filter in line_filters:
             height = bitboard_height(line_filter)
-            while line_filter < top_border:
+            while line_filter < top_border(COLUMNS, ROWS):
                 all_tiles = self.tiles
                 full_board = self.get_full_board(include_borders=True)
 
@@ -640,7 +640,7 @@ class Matrix(Widget):
 
     def move_down(self):
         tetrimino = self.get_tetrimino()
-        if self.collide_bottom(tetrimino, bottom_border):
+        if self.collide_bottom(tetrimino, bottom_border(COLUMNS)):
             self.tiles |= tetrimino.tiles
             tetrimino.placed = True
             return
@@ -660,7 +660,7 @@ class Matrix(Widget):
 
     def move_left(self):
         active_tetrimino = self.get_tetrimino()
-        if self.collide_left(active_tetrimino, left_border):
+        if self.collide_left(active_tetrimino, left_border(COLUMNS, ROWS)):
             return
 
         for bit in self.tiles:
@@ -672,7 +672,7 @@ class Matrix(Widget):
 
     def move_right(self):
         active_tetrimino = self.get_tetrimino()
-        if self.collide_right(active_tetrimino, right_border):
+        if self.collide_right(active_tetrimino, right_border(COLUMNS, ROWS)):
             return
 
         for bit in self.tiles:
@@ -707,7 +707,7 @@ class Matrix(Widget):
 
     def is_game_over(self):
         for bit in self.tiles:
-            if bit & top_border > 0:
+            if bit & top_border(COLUMNS, ROWS) > 0:
                 return True
 
 
