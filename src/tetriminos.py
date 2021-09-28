@@ -17,7 +17,7 @@ from src.settings import (
     SMALL_TILE_SIZE,
 )
 
-from src.utils import asset_resource_path, draw_scaffold, clamp
+from src.utils import asset_resource_path, draw_scaffold, ease_in_sine, clamp, incomplete_perimeter_points
 
 from src.bitboard import (
     arrangement_to_bit,
@@ -238,12 +238,14 @@ class MouseInteraction(ABC):
 
 @dataclass
 class ReactiveText(Text, MouseInteraction):
-    active_function: Callable = lambda time: clamp(time ** 2, 0, 100)
-    inactive_function: Callable = lambda time: 0
+    active_function: Callable = lambda weight: clamp(ease_in_sine(weight), 0, 1)
+    inactive_function: Callable = lambda weight: 1 - clamp(ease_in_sine(weight), 0, 1)
 
     def __post_init__(self):
         super().__post_init__()
         self.start = self.end = None
+        self.duration = 200
+        self.active = False
 
     def on_click(self, event):
         print("down")
@@ -253,36 +255,49 @@ class ReactiveText(Text, MouseInteraction):
 
     def on_move(self, event):
         collide = self.rect.collidepoint(event.pos) == 1
-        if collide and not self.start:
+        if collide:
+            if self.start:
+                return
             self.start = pygame.time.get_ticks()
             self.end = None
+            self.active = True
+            return
+        else:
+            if self.start:
+                self.start = None
+                self.end = pygame.time.get_ticks()
 
-        if not collide:
-            self.start = None
-            self.end = pygame.time.get_ticks()
+            if self.end and pygame.time.get_ticks() - self.end >= self.duration:
+                self.active = False
 
     def render(self):
         super().render()
+        if not self.active:
+            return
 
         now = pygame.time.get_ticks()
         weight = 0
         if self.start:
-            time_passed = now - self.start
-            weight = self.active_function(time_passed/100)
+            time_passed = clamp((now - self.start)/self.duration, 0, 1)
+            weight = self.active_function(time_passed)
         elif self.end:
-            time_passed = now - self.end
-            weight = self.inactive_function(time_passed/100)
+            time_passed = clamp((now - self.end)/self.duration, 0, 1)
+            weight = self.inactive_function(time_passed)
         
         if not weight:
             return 
 
-        x1, y1 = self.rect.topleft
-        x2, y2 = self.rect.topright
+        points = [
+            self.rect.topleft,
+            self.rect.topright,
+            self.rect.bottomright,
+            self.rect.bottomleft,
+        ]
 
-        mid_x = (100 - weight) / 100 * x1 + (weight/100) * x2
-        mid_y = (100 - weight) / 100 * y1 + (weight/100) * y2
+        draw_points = incomplete_perimeter_points(points, weight)
 
-        pygame.draw.line(self.screen, (255,255,255), self.rect.topleft, (mid_x, mid_y))
+        for p1, p2 in zip(draw_points, draw_points[1:]):
+            pygame.draw.line(self.screen, (255,255,255), p1, p2)
 
 @dataclass
 class Tetrimino(Widget):

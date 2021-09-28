@@ -172,7 +172,7 @@ class GameOverScene(Scene):
         self.font = pygame.font.SysFont("monospace", 50)
 
     def init_widgets(self):
-        self.game_over = Text(self.screen, (500, 500), (160, 120),self.font, "GAME OVER")
+        self.game_over = ReactiveText(self.screen, (500, 500), (160, 120),self.font, "GAME OVER")
         self.score_text = Text(self.screen, (500, 700), (160, 120), self.font, str(self.score))
    
     def render(self):
