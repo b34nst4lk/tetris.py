@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 
 from src.settings import FPS
 
+
 class Mode(ABC):
     @staticmethod
     @abstractmethod
@@ -14,8 +15,10 @@ class Mode(ABC):
     def score(lines_cleared: List[int], soft_drops: int):
         pass
 
+
 class GameBoy(Mode):
     pass
+
 
 class SNES(Mode):
     LEVELS_AND_FRAME_RATE = {
@@ -52,10 +55,10 @@ class SNES(Mode):
         level = min([level, max(SNES.LEVELS_AND_FRAME_RATE)])
         while not SNES.LEVELS_AND_FRAME_RATE.get(level):
             level -= 1
-        return SNES.LEVELS_AND_FRAME_RATE[level] / FPS * 1000 
+        return SNES.LEVELS_AND_FRAME_RATE[level] / FPS * 1000
 
     @staticmethod
     def score(lines_cleared: List[int], soft_drops: int, level: int) -> int:
-        total_lines_cleared = sum(lines_cleared) 
+        total_lines_cleared = sum(lines_cleared)
         score = SNES.LINES_CLEAR_SCORE[total_lines_cleared] * (level + 1)
         return score

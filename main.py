@@ -20,7 +20,7 @@ from src.settings import (
     FPS,
 )
 
-from src.utils import asset_resource_path
+from utils.io import asset_resource_path
 
 
 def calculate_score(lines_cleared: List[int]) -> int:
@@ -49,6 +49,7 @@ class Scene(ABC):
             self.render()
             pygame.display.flip()
             self.clock.tick(FPS)
+        return None, None
 
     def init_widgets(self):
         pass
@@ -78,9 +79,13 @@ class GameScene(Scene):
         self.stashed_tetrimino = TetriminoDisplay(self.screen, (400, 100))
         self.matrix = Matrix(self.screen, (400, 260), self.shape_generator)
         self.next_tetrimino = TetriminoDisplay(self.screen, (720, 100))
-        self.score_text = ReactiveText(self.screen, (560, 100), (160, 60), self.font, "0")
-        self.level_text = Text(self.screen, (560, 160), (160, 60), self.font, f"Level {self.level}")
-    
+        self.score_text = ReactiveText(
+            self.screen, (560, 100), (160, 60), self.font, "0"
+        )
+        self.level_text = Text(
+            self.screen, (560, 160), (160, 60), self.font, f"Level {self.level}"
+        )
+
         self.mousables = [self.score_text]
 
     def init_state(self):
@@ -105,7 +110,11 @@ class GameScene(Scene):
         active_tetrimino = self.matrix.get_tetrimino()
         if not self.locked:
             for event in pygame.event.get():
-                if event.type in {pygame.MOUSEMOTION, pygame.MOUSEBUTTONUP, pygame.MOUSEBUTTONDOWN}:
+                if event.type in {
+                    pygame.MOUSEMOTION,
+                    pygame.MOUSEBUTTONUP,
+                    pygame.MOUSEBUTTONDOWN,
+                }:
                     for subscriber in self.mousables:
                         subscriber.push(event)
                 if event.type == pygame.KEYDOWN:
@@ -147,12 +156,12 @@ class GameScene(Scene):
             self.lines_cleared += sum(lines_cleared)
             self.total_score += SNES.score(lines_cleared, 0, self.level)
             self.score_text.set_text(self.total_score)
-            self.level_text.set_text(f"Level {self.level}") 
+            self.level_text.set_text(f"Level {self.level}")
 
         if self.matrix.is_game_over():
             self.running = False
             return "game_over", {"score": self.total_score}
-        
+
         return None, None
 
     def render(self):
@@ -164,6 +173,7 @@ class GameScene(Scene):
         self.score_text.render()
         self.level_text.render()
 
+
 @dataclass
 class GameOverScene(Scene):
     score: int
@@ -172,12 +182,17 @@ class GameOverScene(Scene):
         self.font = pygame.font.SysFont("monospace", 50)
 
     def init_widgets(self):
-        self.game_over = ReactiveText(self.screen, (500, 500), (160, 120),self.font, "GAME OVER")
-        self.score_text = Text(self.screen, (500, 700), (160, 120), self.font, str(self.score))
-   
+        self.game_over = ReactiveText(
+            self.screen, (500, 500), (160, 120), self.font, "GAME OVER"
+        )
+        self.score_text = Text(
+            self.screen, (500, 700), (160, 120), self.font, str(self.score)
+        )
+
     def render(self):
         self.game_over.render()
         self.score_text.render()
+
 
 def main():
     pygame.init()
@@ -191,13 +206,13 @@ def main():
         "game": GameScene,
         "game_over": GameOverScene,
     }
-    
+
     next_scene_key, params = "game", {}
     running = True
     while running:
         scene = scenes[next_scene_key](screen, **params)
         print(next_scene_key)
-        next_scene_key, params = scene.run()    
+        next_scene_key, params = scene.run()
         if not next_scene_key:
             break
 

@@ -17,7 +17,13 @@ from src.settings import (
     SMALL_TILE_SIZE,
 )
 
-from src.utils import asset_resource_path, draw_scaffold, ease_in_sine, clamp, incomplete_perimeter_points
+from utils.io import (
+    asset_resource_path,
+)
+
+from utils.draw import (
+    draw_scaffold,
+)
 
 from src.bitboard import (
     arrangement_to_bit,
@@ -31,6 +37,13 @@ from src.bitboard import (
     top_border,
     widen_bitboard_width,
 )
+
+from utils.interpolation import (
+    clamp,
+    incomplete_perimeter_points,
+)
+
+from utils.easing import ease_in_sine
 
 # Load assets
 background_path = asset_resource_path("Board.png")
@@ -193,6 +206,7 @@ class Widget(ABC):
     def render(self):
         pass
 
+
 @dataclass
 class Text(Widget):
     size: Tuple[int, int]
@@ -215,6 +229,7 @@ class Text(Widget):
         draw_scaffold(self.screen, self.rect)
         self.screen.blit(text, text.get_rect(center=(x, y)))
 
+
 class MouseInteraction(ABC):
     def push(self, event):
         if event.type == pygame.MOUSEMOTION:
@@ -235,6 +250,7 @@ class MouseInteraction(ABC):
     @abstractmethod
     def on_release(self, event):
         pass
+
 
 @dataclass
 class ReactiveText(Text, MouseInteraction):
@@ -278,14 +294,14 @@ class ReactiveText(Text, MouseInteraction):
         now = pygame.time.get_ticks()
         weight = 0
         if self.start:
-            time_passed = clamp((now - self.start)/self.duration, 0, 1)
+            time_passed = clamp((now - self.start) / self.duration, 0, 1)
             weight = self.active_function(time_passed)
         elif self.end:
-            time_passed = clamp((now - self.end)/self.duration, 0, 1)
+            time_passed = clamp((now - self.end) / self.duration, 0, 1)
             weight = self.inactive_function(time_passed)
-        
+
         if not weight:
-            return 
+            return
 
         points = [
             self.rect.topleft,
@@ -297,7 +313,8 @@ class ReactiveText(Text, MouseInteraction):
         draw_points = incomplete_perimeter_points(points, weight)
 
         for p1, p2 in zip(draw_points, draw_points[1:]):
-            pygame.draw.line(self.screen, (255,255,255), p1, p2)
+            pygame.draw.line(self.screen, (255, 255, 255), p1, p2)
+
 
 @dataclass
 class Tetrimino(Widget):
@@ -313,7 +330,7 @@ class Tetrimino(Widget):
         if self.size == "normal":
             self.tile = tiles[self.color]
             self.tile_size = TILE_SIZE
-        else: 
+        else:
             self.tile = small_tiles[self.color]
             self.tile_size = SMALL_TILE_SIZE
         self.setup()
@@ -333,7 +350,14 @@ class Tetrimino(Widget):
         self.update_tiles()
 
     def render(self):
-        render(self.screen, self.tiles, self.offset, self.rows, self.columns, tile_size=self.tile_size)
+        render(
+            self.screen,
+            self.tiles,
+            self.offset,
+            self.rows,
+            self.columns,
+            tile_size=self.tile_size,
+        )
 
     def update_tiles(self):
         tiles: Dict[int, Surface] = {}
@@ -418,6 +442,7 @@ class Ghost(Tetrimino):
     def render(self):
         render(self.screen, self.tiles, self.offset, self.rows, self.columns)
 
+
 @dataclass
 class TetriminoDisplay(Widget):
     tile_size: Tuple[int, int] = SMALL_TILE_SIZE
@@ -473,11 +498,18 @@ class TetriminoDisplay(Widget):
             arrangement,
             columns=tetriminos_widths[shape],
             rows=tetriminos_height[shape],
-            size="small"
+            size="small",
         )
 
     def render(self):
-        render(self.screen, self.tiles, self.offset, self.rows, self.columns, tile_size=self.tile_size)
+        render(
+            self.screen,
+            self.tiles,
+            self.offset,
+            self.rows,
+            self.columns,
+            tile_size=self.tile_size,
+        )
         if self.tetrimino:
             self.tetrimino.render()
 
@@ -650,7 +682,7 @@ class Matrix(Widget):
         self.get_tetrimino().move_right()
         self.ghost.update(self.get_full_board())
 
-    def rotate(self, direction: int=1):
+    def rotate(self, direction: int = 1):
         active_tetrimino = self.get_tetrimino()
         test_bitboard = active_tetrimino.test_rotate(direction)
 
