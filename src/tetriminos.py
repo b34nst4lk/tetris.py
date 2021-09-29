@@ -25,7 +25,7 @@ from utils.draw import (
     draw_scaffold,
 )
 
-from src.bitboard import (
+from utils.bitboard import (
     arrangement_to_bit,
     bitboard_height,
     bitboard_to_coords,
@@ -608,7 +608,7 @@ class Matrix(Widget):
         lines_cleared = []
 
         for line_filter in line_filters:
-            height = bitboard_height(line_filter)
+            height = bitboard_height(line_filter, COLUMNS, ROWS)
             while line_filter < top_border(COLUMNS, ROWS):
                 all_tiles = self.tiles
                 full_board = self.get_full_board(include_borders=True)

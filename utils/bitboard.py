@@ -1,27 +1,20 @@
 import textwrap
 from typing import List, Tuple
 
-from src.settings import (
-    COLUMNS,
-    ROWS,
-    TILE_WIDTH,
-    TILE_HEIGHT,
-)
 
-
-def print_board(name, board, height=ROWS, width=COLUMNS):
+def print_board(name: str, board: int, columns: int, rows: int):
     print("\n")
     print(name)
     string_board = str(bin(board))[2:]
-    string_board = string_board.zfill(height * width)
-    for row in textwrap.wrap(string_board, width):
+    string_board = string_board.zfill(columns * rows)
+    for row in textwrap.wrap(string_board, columns):
         print(row)
 
 
-def arrangement_to_bit(arrangement: List[List[int]], width=COLUMNS) -> int:
+def arrangement_to_bit(arrangement: List[List[int]], columns: int) -> int:
     bit = 0
     for row in arrangement:
-        bit <<= width
+        bit <<= columns
         row_bit = 0
         for tile in row:
             row_bit <<= 1
@@ -62,13 +55,14 @@ def right_border(columns: int, rows: int) -> int:
         border |= 1 << (shift * columns)
     return border
 
+
 def left_border(columns: int, rows: int) -> int:
     border = right_border(columns, rows)
     border <<= columns - 1
     return border
 
 
-def bitboard_to_row(bitboard: int, rows: int = ROWS, columns: int = COLUMNS) -> int:
+def bitboard_to_row(bitboard: int, rows: int, columns: int) -> int:
     row = 1
     while bitboard & bottom_border(columns) == 0:
         bitboard >>= columns
@@ -76,7 +70,7 @@ def bitboard_to_row(bitboard: int, rows: int = ROWS, columns: int = COLUMNS) -> 
     return rows - row
 
 
-def bitboard_to_column(bitboard: int, columns: int = COLUMNS, rows: int = ROWS) -> int:
+def bitboard_to_column(bitboard: int, columns: int, rows: int) -> int:
     column = 1
     while bitboard & right_border(columns, rows) == 0:
         bitboard >>= 1
@@ -85,7 +79,7 @@ def bitboard_to_column(bitboard: int, columns: int = COLUMNS, rows: int = ROWS) 
     return columns - column
 
 
-def bitboard_bottom(bitboard: int, rows: int = ROWS, columns: int = COLUMNS) -> int:
+def bitboard_bottom(bitboard: int, rows: int, columns: int) -> int:
     if bitboard == 0:
         return 0
 
@@ -96,7 +90,7 @@ def bitboard_bottom(bitboard: int, rows: int = ROWS, columns: int = COLUMNS) -> 
     return rows
 
 
-def bitboard_top(bitboard: int, rows: int = ROWS, columns: int = COLUMNS) -> int:
+def bitboard_top(bitboard: int, rows: int, columns: int) -> int:
     if bitboard == 0:
         return 0
 
@@ -108,7 +102,7 @@ def bitboard_top(bitboard: int, rows: int = ROWS, columns: int = COLUMNS) -> int
     return rows
 
 
-def bitboard_height(bitboard: int, rows: int = ROWS, columns: int = COLUMNS):
+def bitboard_height(bitboard: int, rows: int, columns: int):
     top = bitboard_top(bitboard, rows, columns)
     bottom = bitboard_bottom(bitboard, rows, columns)
     return top - bottom + 1
@@ -116,17 +110,17 @@ def bitboard_height(bitboard: int, rows: int = ROWS, columns: int = COLUMNS):
 
 def bitboard_to_coords(
     bitboard: int,
-    rows: int = ROWS,
-    columns: int = COLUMNS,
-    tile_width: int = TILE_WIDTH,
-    tile_height: int = TILE_HEIGHT,
+    rows: int,
+    columns: int,
+    tile_width: int,
+    tile_height: int,
 ) -> Tuple[int, int]:
     only_one_bit = len(decompose_bits(bitboard)) == 1
     if not only_one_bit:
         raise ValueError("bitboard contains more than one bit")
 
     row = bitboard_to_row(bitboard, rows, columns)
-    column = bitboard_to_column(bitboard, columns)
+    column = bitboard_to_column(bitboard, columns, rows)
 
     coords = (column * tile_width, row * tile_height)
     return coords
